@@ -1,2 +1,2 @@
 # VulkanTest
-Vulkan study project with simple deferred rendering pipeline.
+Vulkan study project with a simple deferred rendering pipeline.
