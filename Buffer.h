@@ -1,0 +1,29 @@
+#pragma once
+
+#include <vulkan/vulkan.h>
+
+class SceneObject;
+class LightingPass;
+
+class Buffer
+{
+public:
+	Buffer(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, VkBufferUsageFlags usage, VkDeviceSize size, void* initData);
+	Buffer(VkPhysicalDevice physicalDevice, VkDevice device, VkBufferUsageFlags usage, VkDeviceSize size);
+	~Buffer();
+
+	void update(void* data, size_t size);
+private:
+	friend SceneObject;
+	friend LightingPass;
+
+	VkDevice m_device{ VK_NULL_HANDLE };
+
+	VkBuffer m_stagingBuffer{ VK_NULL_HANDLE };
+	VkDeviceMemory m_stagingMemory{ VK_NULL_HANDLE };
+
+	VkBuffer m_vkBuffer{ VK_NULL_HANDLE };
+	VkDeviceMemory m_deviceMemory{ VK_NULL_HANDLE };
+
+	void* m_hostData{ nullptr };
+};
