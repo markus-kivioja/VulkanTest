@@ -19,9 +19,9 @@ void main()
 	vec4 temp = transforms.projInverse * ndc;
 	vec3 viewSpacePos = temp.xyz / temp.w;
 	
-	const vec3 L = normalize(vec3(-0.1, 0.05, 0.5));
+	const vec3 L = normalize(vec3(0.4, 0.3, 1));
 	vec3 N = normalize(texture(normalSampler, uvCoord).xyz);
-	vec3 V = normalize(viewSpacePos);
+	vec3 V = normalize(-viewSpacePos);
 	vec3 H = normalize(L + V);
 	
 	const float ambientFactor = 1.0f;
@@ -29,7 +29,7 @@ void main()
 	float specular = 0;
 	if (diffuse > 0)
 	{
-		specular = pow(max(dot(N, H), 0.0), 5.0f);
+		specular = pow(max(dot(N, H), 0.0), 8.0f);
 	}
 
     outColor = texture(albedoSampler, uvCoord) * diffuse + specular;

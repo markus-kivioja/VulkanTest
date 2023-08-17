@@ -362,8 +362,6 @@ void Renderer::render()
         m_renderPasses[GBUFFER]->begin(m_vkCommandBuffers[m_bufferIdx]);
         m_scene->render(m_vkCommandBuffers[m_bufferIdx], m_bufferIdx);
         m_renderPasses[GBUFFER]->end(m_vkCommandBuffers[m_bufferIdx]);
-        
-        m_depthBuffer->addBarrier(m_vkCommandBuffers[m_bufferIdx], VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 
         // Do the lighting pass
         m_renderPasses[LIGHTING]->begin(m_vkCommandBuffers[m_bufferIdx], m_frameBufferIdx);

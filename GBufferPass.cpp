@@ -32,14 +32,14 @@ GBufferPass::GBufferPass(VkDevice device, std::vector<Texture*> colorTargets, Te
     attachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     attachmentDescriptions[2].flags = 0;
-    attachmentDescriptions[2].format = VK_FORMAT_D32_SFLOAT;
+    attachmentDescriptions[2].format = depthTarget->m_format;
     attachmentDescriptions[2].samples = VK_SAMPLE_COUNT_1_BIT;
     attachmentDescriptions[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachmentDescriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachmentDescriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachmentDescriptions[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachmentDescriptions[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachmentDescriptions[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachmentDescriptions[2].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachmentDescriptions[2].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
     std::array<VkAttachmentReference, 2> colorAttachmentRefs;
     colorAttachmentRefs[0].attachment = 0;
