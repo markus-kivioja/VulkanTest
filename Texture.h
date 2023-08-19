@@ -5,6 +5,7 @@
 #include <string>
 
 class GBufferPass;
+class ShadowPass;
 class LightingPass;
 class SceneObject;
 class Renderer;
@@ -19,6 +20,7 @@ public:
 
 private:
 	friend GBufferPass;
+	friend ShadowPass;
 	friend LightingPass;
 	friend SceneObject;
 	friend Renderer;

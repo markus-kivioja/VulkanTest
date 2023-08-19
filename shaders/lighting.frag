@@ -24,13 +24,13 @@ void main()
 	vec3 V = normalize(-viewSpacePos);
 	vec3 H = normalize(L + V);
 	
-	const float ambientFactor = 1.0f;
-	float diffuse = max(dot(N, L), 0.0) * ambientFactor;
+	const float ambient = 0.4f;
+	float diffuse = max(dot(N, L), 0.0);
 	float specular = 0;
 	if (diffuse > 0)
 	{
-		specular = pow(max(dot(N, H), 0.0), 8.0f);
+		specular = pow(max(dot(N, H), 0.0), 16.0f);
 	}
 
-    outColor = texture(albedoSampler, uvCoord) * diffuse + specular;
+    outColor = texture(albedoSampler, uvCoord) * (ambient + diffuse) + specular;
 }

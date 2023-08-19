@@ -5,6 +5,8 @@
 #include <vulkan/vulkan.h>
 
 #include <memory>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 #include "Buffer.h"
 #include "Texture.h"
@@ -16,10 +18,20 @@ class SceneObject
 public:
 	SceneObject(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer,
 		VkPipelineLayout pipelineLayout, VkDescriptorSetAllocateInfo descriptorSetAllocInfo);
+	~SceneObject();
 
 	void render(VkCommandBuffer commandBuffer, uint32_t buffedIdx, Camera* camera, float dt);
 private:
-	inline static const std::string ALBEDO_FILENAME = "assets/crate.jpg" ;
+	inline static const std::string MESH_FILENAME = "assets/mickey.obj" ;
+	inline static const std::string ALBEDO_FILENAME = "assets/mickey.png" ;
+	uint16_t addVertex(uint32_t hash, GBufferPass::Vertex* pVertex);
+	void loadIndexedMesh(std::string const& filename);
+	struct VertexCacheEntry
+	{
+		uint32_t index;
+		VertexCacheEntry* pNext;
+	};
+	std::vector<VertexCacheEntry*> m_vertexCache;
 
 	std::vector<VkDescriptorSet> m_descriptorSets;
 	VkPipelineLayout m_pipelineLayout{ VK_NULL_HANDLE };
