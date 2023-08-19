@@ -17,7 +17,7 @@ public:
 	SceneObject(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer,
 		VkPipelineLayout pipelineLayout, VkDescriptorSetAllocateInfo descriptorSetAllocInfo);
 
-	void render(VkCommandBuffer commandBuffer, uint32_t buffedIdx, Camera* camera);
+	void render(VkCommandBuffer commandBuffer, uint32_t buffedIdx, Camera* camera, float dt);
 private:
 	inline static const std::string ALBEDO_FILENAME = "assets/crate.jpg" ;
 
@@ -35,6 +35,9 @@ private:
 
 	std::vector<GBufferPass::Vertex> m_vertices;
 	std::vector<uint16_t> m_indices;
+
+	float m_rotationSpeed{ 1.0f };
+	float m_orientation = 0;
 
 	uint32_t m_id{ 0 };
 };

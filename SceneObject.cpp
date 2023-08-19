@@ -108,13 +108,11 @@ SceneObject::SceneObject(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice 
     }
 }
 
-void SceneObject::render(VkCommandBuffer commandBuffer, uint32_t buffedIdx, Camera* camera)
+void SceneObject::render(VkCommandBuffer commandBuffer, uint32_t buffedIdx, Camera* camera, float dt)
 {
-    static auto startTime = std::chrono::high_resolution_clock::now();
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
     GBufferPass::Transforms transforms{};
-    transforms.model = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f + m_id * 1.0f, 0.0f, m_id * 0.2f)), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    m_orientation += dt * m_rotationSpeed;
+    transforms.model = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f + m_id * 1.0f, 0.0f, m_id * 0.2f)), m_orientation, glm::vec3(0.0f, 0.0f, 1.0f));
     transforms.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     transforms.projection = glm::perspective(glm::radians(45.0f), Renderer::WINDOW_WIDTH / static_cast<float>(Renderer::WINDOW_HEIGHT), 0.1f, 10.0f);
     transforms.projection[1][1] *= -1;

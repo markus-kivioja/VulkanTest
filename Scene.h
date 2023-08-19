@@ -17,7 +17,7 @@ public:
 
 	void clean();
 
-	void render(VkCommandBuffer commandBuffer, uint32_t buffedIdx);
+	void render(VkCommandBuffer commandBuffer, uint32_t buffedIdx, float dt);
 
 	void keyPressed(GLFWwindow* window, int key, int scancode, int action, int mods);
 private:

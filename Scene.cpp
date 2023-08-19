@@ -91,11 +91,11 @@ void Scene::clean()
     vkDestroyDescriptorPool(m_vkDevice, m_descriptorPool, nullptr);
 }
 
-void Scene::render(VkCommandBuffer commandBuffer, uint32_t buffedIdx)
+void Scene::render(VkCommandBuffer commandBuffer, uint32_t buffedIdx, float dt)
 {
 	for (auto const& obj : m_objects)
 	{
-		obj->render(commandBuffer, buffedIdx, m_camera.get());
+		obj->render(commandBuffer, buffedIdx, m_camera.get(), dt);
 	}
 }
 

@@ -355,15 +355,20 @@ void Renderer::render()
     {
         beginFrame();
 
+        static auto prevTime = std::chrono::high_resolution_clock::now();
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - prevTime).count();
+        prevTime = currentTime;
+
         // Create the G-buffer render job
         RenderThreadPool::RenderJob gBufferJob{};
         gBufferJob.bufferIdx = m_bufferIdx;
         gBufferJob.signalSemaphores = std::vector<VkSemaphore>{ m_gBufferPassFinished[m_bufferIdx] };
         gBufferJob.hostSignals = std::vector<HostSemaphore*>{ &m_gBufferPassSubmitted };
-        gBufferJob.job = [this](VkCommandBuffer commandBuffer)
+        gBufferJob.job = [this, dt](VkCommandBuffer commandBuffer)
         {
             m_renderPasses[GBUFFER]->begin(commandBuffer);
-            m_scene->render(commandBuffer, m_bufferIdx);
+            m_scene->render(commandBuffer, m_bufferIdx, dt);
             m_renderPasses[GBUFFER]->end(commandBuffer);
         };
 
