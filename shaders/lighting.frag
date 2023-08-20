@@ -43,7 +43,7 @@ void main()
 	const float SHADOW_BIAS = 0.001f;
 	if (lightNDC.z > texture(shadowSampler, shadowMapUV).r + SHADOW_BIAS)
 	{
-		shadow = 0.4f;
+		shadow = 0.2f;
 	}
 	
 	const float ambient = 0.4f;

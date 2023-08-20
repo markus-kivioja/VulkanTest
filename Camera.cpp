@@ -19,20 +19,21 @@ Camera::Camera(Type type, VkPhysicalDevice physicalDevice, VkDevice device, VkDe
         std::cout << "Failed to allocate descriptor sets" << std::endl;
         std::terminate();
     }
-
-    const float aspectRatio = Renderer::WINDOW_WIDTH / static_cast<float>(Renderer::WINDOW_HEIGHT);
+    
     GBufferPass::CameraTransforms cameraTransforms{};
     if (m_type == NORMAL)
     {
-        cameraTransforms.projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 10.0f);
-        m_position = glm::vec3(0.0f, 0.0f, 3.0f);
-        m_direction = glm::vec3(0.0f, 0.0f, -1.0f);
+        const float aspectRatio = Renderer::WINDOW_WIDTH / static_cast<float>(Renderer::WINDOW_HEIGHT);
+        cameraTransforms.projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+        m_position = glm::vec3(-2.2f, 0.7f, 4.2f);
+        m_direction = -glm::vec3(-3.0f, 0.7f, 3.0f);
     }
     else if (m_type == LIGHT)
     {
-        cameraTransforms.projection = glm::ortho(aspectRatio * -2.1f, aspectRatio * 2.1f, -2.1f, 2.1f, 0.1f, 10.0f);
-        m_position = glm::vec3(-0.5f, 4.0f, 7.0f);
-        m_direction = glm::vec3(0.0f, -0.7f, -1.0f);
+        constexpr float HALF_WIDTH = 2.2f;
+        cameraTransforms.projection = glm::ortho(-HALF_WIDTH, HALF_WIDTH, -HALF_WIDTH, HALF_WIDTH, -9.0f, 20.0f);
+        m_position = glm::vec3(1.0f, 5.0f, 8.0f);
+        m_direction = glm::vec3(-0.1f, -0.7f, -1.0f);
     }
     cameraTransforms.projection[1][1] *= -1;
     cameraTransforms.view = glm::lookAt(m_position, m_position + m_direction, glm::vec3(0.0f, 1.0f, 0.0f));

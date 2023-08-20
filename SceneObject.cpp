@@ -3,11 +3,6 @@
 #include "Renderer.h"
 #include "Camera.h"
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 #include <chrono>
 #include <iostream>
 #include <array>
@@ -15,27 +10,31 @@
 
 SceneObject::SceneObject(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer,
      VkDescriptorSetAllocateInfo descSetAllocInfo) :
-    m_id(id)
+    m_physicalDevice(physicalDevice)
+    , m_device(device)
+    , m_copyCommandBuffer(copyCommandBuffer)
+    , m_descSetAllocInfo(descSetAllocInfo)
+    , m_id(id)
 {
-    loadIndexedMesh(MESH_FILENAME);
+}
 
-	m_vertexBuffer = std::make_unique<Buffer>(physicalDevice, device, copyCommandBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+void SceneObject::init()
+{
+    m_vertexBuffer = std::make_unique<Buffer>(m_physicalDevice, m_device, m_copyCommandBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         sizeof(GBufferPass::Vertex) * m_vertices.size(), m_vertices.data());
 
-    m_indexBuffer = std::make_unique<Buffer>(physicalDevice, device, copyCommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+    m_indexBuffer = std::make_unique<Buffer>(m_physicalDevice, m_device, m_copyCommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         sizeof(uint16_t) * m_indices.size(), m_indices.data());
 
-    m_albedoMap = std::make_unique<Texture>(physicalDevice, device, copyCommandBuffer, ALBEDO_FILENAME);
-
     m_descriptorSets.resize(Renderer::BUFFER_COUNT);
-    VkResult result = vkAllocateDescriptorSets(device, &descSetAllocInfo, m_descriptorSets.data());
+    VkResult result = vkAllocateDescriptorSets(m_device, &m_descSetAllocInfo, m_descriptorSets.data());
     if (result != VK_SUCCESS) {
         std::cout << "Failed to allocate descriptor sets" << std::endl;
         std::terminate();
     }
     for (uint32_t i = 0; i < Renderer::BUFFER_COUNT; ++i)
     {
-        m_uniformBuffers.push_back(std::make_unique<Buffer>(physicalDevice, device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(GBufferPass::ModelTransforms)));
+        m_uniformBuffers.push_back(std::make_unique<Buffer>(m_physicalDevice, m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(GBufferPass::ModelTransforms)));
         VkDescriptorBufferInfo uniformBufferInfo{};
         uniformBufferInfo.buffer = m_uniformBuffers[i]->m_vkBuffer;
         uniformBufferInfo.offset = 0;
@@ -65,7 +64,7 @@ SceneObject::SceneObject(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice 
         textureDescriptorWrite.pImageInfo = &imageInfo;
 
         std::array<VkWriteDescriptorSet, 2> descriptorWrites{ uniformBufferDescriptorWrite, textureDescriptorWrite };
-        vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+        vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
 }
 
@@ -235,18 +234,6 @@ void SceneObject::loadIndexedMesh(std::string const& filename)
 	}
 
 	fin.close();
-}
-
-void SceneObject::update(uint32_t bufferIdx, float dt)
-{
-    GBufferPass::ModelTransforms modelTransforms{};
-    m_orientation += dt * m_rotationSpeed;
-    constexpr float scale = 0.1f;
-    auto translation = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + m_id * 0.0f, 0.0f, -1.0f + m_id * 1.0f));
-    auto rotationY = glm::rotate(translation, m_orientation, glm::vec3(0.0f, 1.0f, 0.0f));
-    auto rotationZ = glm::rotate(rotationY, static_cast<float>(-M_PI) * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f));
-    modelTransforms.model = glm::scale(rotationZ, glm::vec3(scale, scale, scale));
-    m_uniformBuffers[bufferIdx]->update(&modelTransforms, sizeof(GBufferPass::ModelTransforms));
 }
 
 void SceneObject::render(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t bufferIdx, float dt)

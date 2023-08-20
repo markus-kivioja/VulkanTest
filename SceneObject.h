@@ -19,11 +19,10 @@ public:
 		VkDescriptorSetAllocateInfo descSetAllocInfo);
 	~SceneObject();
 
-	void update(uint32_t bufferIdx, float dt);
+	void init();
+	virtual void update(uint32_t bufferIdx, float dt) = 0;
 	void render(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t bufferIdx, float dt);
-private:
-	inline static const std::string MESH_FILENAME = "assets/mickey.obj" ;
-	inline static const std::string ALBEDO_FILENAME = "assets/mickey.png" ;
+protected:
 	uint16_t addVertex(uint32_t hash, GBufferPass::Vertex* pVertex);
 	void loadIndexedMesh(std::string const& filename);
 	struct VertexCacheEntry
@@ -31,6 +30,11 @@ private:
 		uint32_t index;
 		VertexCacheEntry* pNext;
 	};
+	VkPhysicalDevice m_physicalDevice;
+	VkDevice m_device;
+	VkCommandBuffer m_copyCommandBuffer;
+	VkDescriptorSetAllocateInfo m_descSetAllocInfo;
+
 	std::vector<VertexCacheEntry*> m_vertexCache;
 
 	std::vector<VkDescriptorSet> m_descriptorSets;

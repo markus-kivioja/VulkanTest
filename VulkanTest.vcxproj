@@ -157,9 +157,11 @@
   <ItemGroup>
     <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Floor.cpp" />
     <ClCompile Include="GBufferPass.cpp" />
     <ClCompile Include="LightingPass.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mickey.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="RenderPass.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -171,8 +173,10 @@
   <ItemGroup>
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Floor.h" />
     <ClInclude Include="GBufferPass.h" />
     <ClInclude Include="LightingPass.h" />
+    <ClInclude Include="Mickey.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RenderPass.h" />
     <ClInclude Include="Scene.h" />

@@ -1,6 +1,8 @@
 #include "Scene.h"
 
 #include "Renderer.h"
+#include "Mickey.h"
+#include "Floor.h"
 
 #include <iostream>
 #include <array>
@@ -8,7 +10,8 @@
 Scene::Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice device, VkQueue queue, uint32_t queueFamilyIdx) :
     m_vkDevice(device)
 {
-    static constexpr uint32_t OBJECT_COUNT = 4;
+    static constexpr uint32_t MICKEY_COUNT = 4;
+    static constexpr uint32_t OBJECT_COUNT = MICKEY_COUNT + 1;
 
     VkDescriptorPoolSize uniformBufferPoolSize{};
     uniformBufferPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -74,10 +77,12 @@ Scene::Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice d
     m_cameras.resize(Camera::Type::COUNT);
     m_cameras[Camera::Type::NORMAL] = std::make_unique<Camera>(Camera::Type::NORMAL, physicalDevice, device, cameraDescSetAllocInfo);
     m_cameras[Camera::Type::LIGHT] = std::make_unique<Camera>(Camera::Type::LIGHT, physicalDevice, device, cameraDescSetAllocInfo);
-    for (int i = 0; i < OBJECT_COUNT; ++i)
+    
+    for (int i = 0; i < MICKEY_COUNT; ++i)
     {
-        m_objects.push_back(std::make_unique<SceneObject>(i, physicalDevice, device, copyCommandBuffer, modelDescSetAllocInfo));
+        m_objects.push_back(std::make_unique<Mickey>(i, physicalDevice, device, copyCommandBuffer, modelDescSetAllocInfo));
     }
+    m_objects.push_back(std::make_unique<Floor>(OBJECT_COUNT, physicalDevice, device, copyCommandBuffer, modelDescSetAllocInfo));
 
     vkEndCommandBuffer(copyCommandBuffer);
 
