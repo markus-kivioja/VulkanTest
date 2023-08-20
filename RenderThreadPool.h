@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Renderer.h"
-
 #include <vulkan/vulkan.h>
 
 #include <iostream>
@@ -14,13 +12,19 @@
 class RenderThreadPool
 {
 public:
+	struct HostSemaphore
+	{
+		bool signaled{ false };
+		std::condition_variable cv;
+		std::mutex mutex;
+	};
 	struct RenderJob
 	{
 		std::function<void(VkCommandBuffer)> job;
 		std::vector<VkSemaphore> signalSemaphores;
 		std::vector<VkSemaphore> waitSemaphores;
-		std::vector<Renderer::HostSemaphore*> hostSignals;
-		std::vector<Renderer::HostSemaphore*> hostWaits;
+		std::vector<HostSemaphore*> hostSignals;
+		std::vector<HostSemaphore*> hostWaits;
 		VkFence fence{ VK_NULL_HANDLE };
 		uint32_t bufferIdx{ 0 };
 	};
@@ -32,7 +36,7 @@ public:
 	void addJob(RenderJob job);
 private:
 	std::vector<std::thread> m_renderThreads;
-	std::queue<RenderJob> m_jobs;
+	std::queue<RenderJob> m_renderJobs;
 
 	std::condition_variable m_conditionVariable;
 	std::mutex m_mutex;

@@ -2,22 +2,20 @@
 
 #include "Texture.h"
 #include "GBufferPass.h"
+#include "Scene.h"
 
 #include <iostream>
 #include <array>
 
-ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device) :
+ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*> depthTargets) :
     RenderPass::RenderPass(device, 0)
 {
     m_hasDepthAttachment = true;
 
-    m_depthMap = std::make_unique<Texture>(physicalDevice, m_vkDevice, MAP_WIDTH, MAP_HEIGHT,
-        VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
     std::array<VkAttachmentDescription, 1> attachmentDescriptions;
 
     attachmentDescriptions[0].flags = 0;
-    attachmentDescriptions[0].format = m_depthMap->m_format;
+    attachmentDescriptions[0].format = depthTargets[0]->m_format;
     attachmentDescriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
     attachmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -60,11 +58,11 @@ ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device) :
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.renderPass = m_vkRenderPass;
-    std::array<VkImageView, 1> attachmentViews{ m_depthMap->m_imageView };
+    std::array<VkImageView, 1> attachmentViews{ depthTargets[0]->m_imageView };
     framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
     framebufferInfo.pAttachments = attachmentViews.data();
-    framebufferInfo.width = m_depthMap->m_width;
-    framebufferInfo.height = m_depthMap->m_height;
+    framebufferInfo.width = depthTargets[0]->m_width;
+    framebufferInfo.height = depthTargets[0]->m_height;
     framebufferInfo.layers = 1;
 
     VkFramebuffer framebuffer;
@@ -76,14 +74,12 @@ ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device) :
         std::terminate();
     }
 
-    m_targetWidth = m_depthMap->m_width;
-    m_targetHeight = m_depthMap->m_height;
+    m_targetWidth = depthTargets[0]->m_width;
+    m_targetHeight = depthTargets[0]->m_height;
 
     auto vertexShaderSrc = readFile("shaders/shadow_vert.spv");
-    auto fragmentShaderSrc = readFile("shaders/shadow_frag.spv");
 
     VkShaderModule vertexShader = createVkShader(vertexShaderSrc);
-    VkShaderModule fragmentShader = createVkShader(fragmentShaderSrc);
 
     VkPipelineShaderStageCreateInfo vertexShaderStageInfo{};
     vertexShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -91,13 +87,7 @@ ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device) :
     vertexShaderStageInfo.module = vertexShader;
     vertexShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo fragmentShaderStageInfo{};
-    fragmentShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fragmentShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragmentShaderStageInfo.module = fragmentShader;
-    fragmentShaderStageInfo.pName = "main";
-
-    VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShaderStageInfo, fragmentShaderStageInfo };
+    VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShaderStageInfo };
 
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
@@ -159,17 +149,6 @@ ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device) :
 
     std::array<VkPipelineColorBlendAttachmentState, 2> colorBlendAttachments{ colorBlendAttachment1 , colorBlendAttachment2 };
 
-    VkPipelineColorBlendStateCreateInfo colorBlending{};
-    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.logicOp = VK_LOGIC_OP_COPY;
-    colorBlending.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
-    colorBlending.pAttachments = colorBlendAttachments.data();
-    colorBlending.blendConstants[0] = 0.0f;
-    colorBlending.blendConstants[1] = 0.0f;
-    colorBlending.blendConstants[2] = 0.0f;
-    colorBlending.blendConstants[3] = 0.0f;
-
     std::vector<VkDynamicState> dynamicStates = {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR
@@ -179,11 +158,11 @@ ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device) :
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    VkDescriptorSetLayoutBinding uniformBufferLayoutBinding{};
-    uniformBufferLayoutBinding.binding = 0;
-    uniformBufferLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uniformBufferLayoutBinding.descriptorCount = 1;
-    uniformBufferLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    VkDescriptorSetLayoutBinding modelTransformLayoutBinding{};
+    modelTransformLayoutBinding.binding = 0;
+    modelTransformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    modelTransformLayoutBinding.descriptorCount = 1;
+    modelTransformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     samplerLayoutBinding.binding = 1;
@@ -192,23 +171,43 @@ ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device) :
     samplerLayoutBinding.pImmutableSamplers = nullptr;
     samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo{};
-    descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uniformBufferLayoutBinding, samplerLayoutBinding };
-    descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    descriptorSetLayoutInfo.pBindings = bindings.data();
+    VkDescriptorSetLayoutCreateInfo modelDescSetLayoutInfo{};
+    modelDescSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    std::array<VkDescriptorSetLayoutBinding, 2> modelBindings = { modelTransformLayoutBinding, samplerLayoutBinding };
+    modelDescSetLayoutInfo.bindingCount = static_cast<uint32_t>(modelBindings.size());
+    modelDescSetLayoutInfo.pBindings = modelBindings.data();
 
-    result = vkCreateDescriptorSetLayout(device, &descriptorSetLayoutInfo, nullptr, &m_descriptorSetLayout);
+    result = vkCreateDescriptorSetLayout(device, &modelDescSetLayoutInfo, nullptr, &m_modelSetLayout);
     if (result != VK_SUCCESS)
     {
-        std::cout << "Failed to create descriptor set layout!" << std::endl;
+        std::cout << "Failed to create model descriptor set layout!" << std::endl;
+        std::terminate();
+    }
+
+    VkDescriptorSetLayoutBinding cameraTransformLayoutBinding{};
+    cameraTransformLayoutBinding.binding = 0;
+    cameraTransformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    cameraTransformLayoutBinding.descriptorCount = 1;
+    cameraTransformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutCreateInfo cameraDescSetLayoutInfo{};
+    cameraDescSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    std::array<VkDescriptorSetLayoutBinding, 1> cameraBindings = { cameraTransformLayoutBinding };
+    cameraDescSetLayoutInfo.bindingCount = static_cast<uint32_t>(cameraBindings.size());
+    cameraDescSetLayoutInfo.pBindings = cameraBindings.data();
+
+    result = vkCreateDescriptorSetLayout(device, &cameraDescSetLayoutInfo, nullptr, &m_cameraSetLayout);
+    if (result != VK_SUCCESS)
+    {
+        std::cout << "Failed to create camera descriptor set layout!" << std::endl;
         std::terminate();
     }
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout;
+    std::array<VkDescriptorSetLayout, 2> descSetLayouts{ m_modelSetLayout, m_cameraSetLayout };
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descSetLayouts.size());
+    pipelineLayoutInfo.pSetLayouts = descSetLayouts.data();
 
     result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
     if (result != VK_SUCCESS)
@@ -227,7 +226,7 @@ ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device) :
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
+    pipelineInfo.stageCount = 1;
     pipelineInfo.pStages = shaderStages;
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -235,7 +234,7 @@ ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device) :
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pDepthStencilState = &depthStencilStateCreateInfo;
-    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pColorBlendState = nullptr;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = m_pipelineLayout;
     pipelineInfo.renderPass = m_vkRenderPass;
@@ -250,6 +249,12 @@ ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device) :
         std::terminate();
     }
 
-    vkDestroyShaderModule(device, fragmentShader, nullptr);
     vkDestroyShaderModule(device, vertexShader, nullptr);
+}
+
+void ShadowPass::render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
+{
+    begin(commandBuffer);
+    scene->render(commandBuffer, m_pipelineLayout, Camera::Type::LIGHT, bufferIdx, dt);
+    end(commandBuffer);
 }

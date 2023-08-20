@@ -15,13 +15,14 @@ public:
 	RenderPass(VkDevice device, uint32_t colorTargetCount);
 	virtual ~RenderPass();
 
+	virtual void setFrameBufferIdx(uint32_t frameBufferIdx) {};
+
 	void begin(VkCommandBuffer commandBuffer, uint32_t bufferIdx = 0);
-	virtual void render(VkCommandBuffer commandBuffer, uint32_t buffedIdx) {};
+	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) = 0;
 	void end(VkCommandBuffer commandBuffer);
 
 	static std::vector<char> readFile(std::string const& filename);
 
-	VkDescriptorSetLayout getDescriptorSetLayout() const { return m_descriptorSetLayout; };
 protected:
 	friend Texture;
 	friend Scene;
@@ -30,7 +31,8 @@ protected:
 
 	VkDevice m_vkDevice{ VK_NULL_HANDLE };
 	VkPipelineLayout m_pipelineLayout{ VK_NULL_HANDLE };
-	VkDescriptorSetLayout m_descriptorSetLayout{ VK_NULL_HANDLE };
+	VkDescriptorSetLayout m_modelSetLayout{ VK_NULL_HANDLE };
+	VkDescriptorSetLayout m_cameraSetLayout{ VK_NULL_HANDLE };
 	VkPipeline m_pipeline{ VK_NULL_HANDLE };
 	VkRenderPass m_vkRenderPass{ VK_NULL_HANDLE };
 	std::vector<VkFramebuffer> m_framebuffers;

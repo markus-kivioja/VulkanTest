@@ -1,0 +1,5 @@
+glslc gbuffer.vert -o gbuffer_vert.spv
+glslc gbuffer.frag -o gbuffer_frag.spv
+glslc shadow.vert -o shadow_vert.spv
+glslc lighting.vert -o lighting_vert.spv
+glslc lighting.frag -o lighting_frag.spv

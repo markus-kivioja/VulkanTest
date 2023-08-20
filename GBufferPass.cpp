@@ -1,6 +1,7 @@
 #include "GBufferPass.h"
 
 #include "Texture.h"
+#include "Scene.h"
 
 #include <iostream>
 #include <array>
@@ -208,11 +209,11 @@ GBufferPass::GBufferPass(VkDevice device, std::vector<Texture*> colorTargets, Te
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    VkDescriptorSetLayoutBinding uniformBufferLayoutBinding{};
-    uniformBufferLayoutBinding.binding = 0;
-    uniformBufferLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uniformBufferLayoutBinding.descriptorCount = 1;
-    uniformBufferLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    VkDescriptorSetLayoutBinding modelTransformLayoutBinding{};
+    modelTransformLayoutBinding.binding = 0;
+    modelTransformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    modelTransformLayoutBinding.descriptorCount = 1;
+    modelTransformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     samplerLayoutBinding.binding = 1;
@@ -221,23 +222,43 @@ GBufferPass::GBufferPass(VkDevice device, std::vector<Texture*> colorTargets, Te
     samplerLayoutBinding.pImmutableSamplers = nullptr;
     samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo{};
-    descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uniformBufferLayoutBinding, samplerLayoutBinding };
-    descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    descriptorSetLayoutInfo.pBindings = bindings.data();
+    VkDescriptorSetLayoutCreateInfo modelDescSetLayoutInfo{};
+    modelDescSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    std::array<VkDescriptorSetLayoutBinding, 2> modelBindings = { modelTransformLayoutBinding, samplerLayoutBinding };
+    modelDescSetLayoutInfo.bindingCount = static_cast<uint32_t>(modelBindings.size());
+    modelDescSetLayoutInfo.pBindings = modelBindings.data();
 
-    result = vkCreateDescriptorSetLayout(device, &descriptorSetLayoutInfo, nullptr, &m_descriptorSetLayout);
+    result = vkCreateDescriptorSetLayout(device, &modelDescSetLayoutInfo, nullptr, &m_modelSetLayout);
     if (result != VK_SUCCESS)
     {
-        std::cout << "Failed to create descriptor set layout!" << std::endl;
+        std::cout << "Failed to create model descriptor set layout!" << std::endl;
+        std::terminate();
+    }
+
+    VkDescriptorSetLayoutBinding cameraTransformLayoutBinding{};
+    cameraTransformLayoutBinding.binding = 0;
+    cameraTransformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    cameraTransformLayoutBinding.descriptorCount = 1;
+    cameraTransformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutCreateInfo cameraDescSetLayoutInfo{};
+    cameraDescSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    std::array<VkDescriptorSetLayoutBinding, 1> camBindings = { cameraTransformLayoutBinding };
+    cameraDescSetLayoutInfo.bindingCount = static_cast<uint32_t>(camBindings.size());
+    cameraDescSetLayoutInfo.pBindings = camBindings.data();
+
+    result = vkCreateDescriptorSetLayout(device, &cameraDescSetLayoutInfo, nullptr, &m_cameraSetLayout);
+    if (result != VK_SUCCESS)
+    {
+        std::cout << "Failed to create camera descriptor set layout!" << std::endl;
         std::terminate();
     }
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout;
+    std::array<VkDescriptorSetLayout, 2> descSetLayouts{ m_modelSetLayout, m_cameraSetLayout };
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descSetLayouts.size());
+    pipelineLayoutInfo.pSetLayouts = descSetLayouts.data();
 
     result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
     if (result != VK_SUCCESS)
@@ -286,4 +307,11 @@ GBufferPass::GBufferPass(VkDevice device, std::vector<Texture*> colorTargets, Te
 GBufferPass::~GBufferPass()
 {
 
+}
+
+void GBufferPass::render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
+{
+    begin(commandBuffer);
+    scene->render(commandBuffer, m_pipelineLayout, Camera::Type::NORMAL, bufferIdx, dt);
+    end(commandBuffer);
 }

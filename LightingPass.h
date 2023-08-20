@@ -16,14 +16,20 @@ public:
 	LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*> colorTargets, std::vector<Texture*> srcTextures);
 	virtual ~LightingPass();
 
-	virtual void render(VkCommandBuffer commandBuffer, uint32_t buffedIdx);
+	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
+
+	virtual void setFrameBufferIdx(uint32_t frameBufferIdx) override { m_frameBufferIdx = frameBufferIdx; };
 private:
 	struct Transforms {
 		glm::mat4 projInverse;
+		glm::mat4 viewInverse;
+		glm::vec3 lightDir;
 	};
 
 	VkDescriptorPool m_descriptorPool{ VK_NULL_HANDLE };
 	std::vector<VkDescriptorSet> m_descriptorSets;
 	std::vector<std::unique_ptr<Buffer>> m_uniformBuffers;
+
+	uint32_t m_frameBufferIdx{ 0 };
 };
 

@@ -14,9 +14,8 @@
 #include <fstream>
 
 SceneObject::SceneObject(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer,
-    VkPipelineLayout pipelineLayout, VkDescriptorSetAllocateInfo descriptorSetAllocInfo) :
-    m_pipelineLayout(pipelineLayout)
-    , m_id(id)
+     VkDescriptorSetAllocateInfo descSetAllocInfo) :
+    m_id(id)
 {
     loadIndexedMesh(MESH_FILENAME);
 
@@ -29,19 +28,18 @@ SceneObject::SceneObject(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice 
     m_albedoMap = std::make_unique<Texture>(physicalDevice, device, copyCommandBuffer, ALBEDO_FILENAME);
 
     m_descriptorSets.resize(Renderer::BUFFER_COUNT);
-    VkResult result = vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, m_descriptorSets.data());
+    VkResult result = vkAllocateDescriptorSets(device, &descSetAllocInfo, m_descriptorSets.data());
     if (result != VK_SUCCESS) {
         std::cout << "Failed to allocate descriptor sets" << std::endl;
         std::terminate();
     }
     for (uint32_t i = 0; i < Renderer::BUFFER_COUNT; ++i)
     {
-        m_uniformBuffers.push_back(std::make_unique<Buffer>(physicalDevice, device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(GBufferPass::Transforms)));
-
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = m_uniformBuffers[i]->m_vkBuffer;
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(GBufferPass::Transforms);
+        m_uniformBuffers.push_back(std::make_unique<Buffer>(physicalDevice, device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(GBufferPass::ModelTransforms)));
+        VkDescriptorBufferInfo uniformBufferInfo{};
+        uniformBufferInfo.buffer = m_uniformBuffers[i]->m_vkBuffer;
+        uniformBufferInfo.offset = 0;
+        uniformBufferInfo.range = sizeof(GBufferPass::ModelTransforms);
 
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -55,7 +53,7 @@ SceneObject::SceneObject(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice 
         uniformBufferDescriptorWrite.dstArrayElement = 0;
         uniformBufferDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uniformBufferDescriptorWrite.descriptorCount = 1;
-        uniformBufferDescriptorWrite.pBufferInfo = &bufferInfo;
+        uniformBufferDescriptorWrite.pBufferInfo = &uniformBufferInfo;
 
         VkWriteDescriptorSet textureDescriptorWrite{};
         textureDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -239,25 +237,26 @@ void SceneObject::loadIndexedMesh(std::string const& filename)
 	fin.close();
 }
 
-void SceneObject::render(VkCommandBuffer commandBuffer, uint32_t buffedIdx, Camera* camera, float dt)
+void SceneObject::update(uint32_t bufferIdx, float dt)
 {
-    GBufferPass::Transforms transforms{};
+    GBufferPass::ModelTransforms modelTransforms{};
     m_orientation += dt * m_rotationSpeed;
     constexpr float scale = 0.1f;
-    auto translation = glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f + m_id * 1.0f, 0.0f, m_id * 0.2f));
+    auto translation = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + m_id * 0.0f, 0.0f, -1.0f + m_id * 1.0f));
     auto rotationY = glm::rotate(translation, m_orientation, glm::vec3(0.0f, 1.0f, 0.0f));
     auto rotationZ = glm::rotate(rotationY, static_cast<float>(-M_PI) * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f));
-    transforms.model = glm::scale(rotationZ, glm::vec3(scale, scale, scale));
-    transforms.view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    transforms.projection = glm::perspective(glm::radians(45.0f), Renderer::WINDOW_WIDTH / static_cast<float>(Renderer::WINDOW_HEIGHT), 0.1f, 10.0f);
-    transforms.projection[1][1] *= -1;
-    m_uniformBuffers[buffedIdx]->update(&transforms, sizeof(GBufferPass::Transforms));
+    modelTransforms.model = glm::scale(rotationZ, glm::vec3(scale, scale, scale));
+    m_uniformBuffers[bufferIdx]->update(&modelTransforms, sizeof(GBufferPass::ModelTransforms));
+}
+
+void SceneObject::render(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t bufferIdx, float dt)
+{
 
     VkBuffer vertexBuffers[] = { m_vertexBuffer->m_vkBuffer };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer->m_vkBuffer, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[buffedIdx], 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &m_descriptorSets[bufferIdx], 0, nullptr);
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
 }

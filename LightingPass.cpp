@@ -2,6 +2,7 @@
 
 #include "Texture.h"
 #include "Renderer.h"
+#include "Scene.h"
 
 #include <array>
 #include <iostream>
@@ -181,23 +182,50 @@ LightingPass::LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std
     depthLayoutBinding.pImmutableSamplers = nullptr;
     depthLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+    VkDescriptorSetLayoutBinding shadowLayoutBinding{};
+    shadowLayoutBinding.binding = 4;
+    shadowLayoutBinding.descriptorCount = 1;
+    shadowLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    shadowLayoutBinding.pImmutableSamplers = nullptr;
+    shadowLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo{};
     descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    std::array<VkDescriptorSetLayoutBinding, 4> bindings = { uniformBufferLayoutBinding, albedoLayoutBinding, normalLayoutBinding, depthLayoutBinding };
+    std::array<VkDescriptorSetLayoutBinding, 5> bindings = { uniformBufferLayoutBinding, albedoLayoutBinding, normalLayoutBinding, depthLayoutBinding, shadowLayoutBinding };
     descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     descriptorSetLayoutInfo.pBindings = bindings.data();
 
-    result = vkCreateDescriptorSetLayout(device, &descriptorSetLayoutInfo, nullptr, &m_descriptorSetLayout);
+    result = vkCreateDescriptorSetLayout(device, &descriptorSetLayoutInfo, nullptr, &m_modelSetLayout);
     if (result != VK_SUCCESS)
     {
         std::cout << "Failed to create descriptor set layout!" << std::endl;
         std::terminate();
     }
 
+    VkDescriptorSetLayoutBinding cameraTransformLayoutBinding{};
+    cameraTransformLayoutBinding.binding = 0;
+    cameraTransformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    cameraTransformLayoutBinding.descriptorCount = 1;
+    cameraTransformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutCreateInfo cameraDescSetLayoutInfo{};
+    cameraDescSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    std::array<VkDescriptorSetLayoutBinding, 1> cameraBindings = { cameraTransformLayoutBinding };
+    cameraDescSetLayoutInfo.bindingCount = static_cast<uint32_t>(cameraBindings.size());
+    cameraDescSetLayoutInfo.pBindings = cameraBindings.data();
+
+    result = vkCreateDescriptorSetLayout(device, &cameraDescSetLayoutInfo, nullptr, &m_cameraSetLayout);
+    if (result != VK_SUCCESS)
+    {
+        std::cout << "Failed to create camera descriptor set layout!" << std::endl;
+        std::terminate();
+    }
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout;
+    std::array<VkDescriptorSetLayout, 2> descSetLayouts{ m_modelSetLayout, m_cameraSetLayout };
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descSetLayouts.size());
+    pipelineLayoutInfo.pSetLayouts = descSetLayouts.data();
 
     result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
     if (result != VK_SUCCESS)
@@ -239,7 +267,7 @@ LightingPass::LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std
 
     VkDescriptorPoolSize texturePoolSize{};
     texturePoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    texturePoolSize.descriptorCount = 3 * static_cast<uint32_t>(Renderer::BUFFER_COUNT);
+    texturePoolSize.descriptorCount = 4 * static_cast<uint32_t>(Renderer::BUFFER_COUNT);
 
     VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
     descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -255,7 +283,7 @@ LightingPass::LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std
         std::terminate();
     }
 
-    std::vector<VkDescriptorSetLayout> layouts(Renderer::BUFFER_COUNT, m_descriptorSetLayout);
+    std::vector<VkDescriptorSetLayout> layouts(Renderer::BUFFER_COUNT, m_modelSetLayout);
     VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
     descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descriptorSetAllocInfo.descriptorPool = m_descriptorPool;
@@ -291,6 +319,11 @@ LightingPass::LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std
         depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
         depthInfo.imageView = srcTextures[2]->m_imageView;
         depthInfo.sampler = srcTextures[2]->m_sampler;
+
+        VkDescriptorImageInfo shadowInfo{};
+        shadowInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        shadowInfo.imageView = srcTextures[3]->m_imageView;
+        shadowInfo.sampler = srcTextures[3]->m_sampler;
 
         VkWriteDescriptorSet uniformBufferDescriptorWrite{};
         uniformBufferDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -328,11 +361,21 @@ LightingPass::LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std
         depthDescriptorWrite.descriptorCount = 1;
         depthDescriptorWrite.pImageInfo = &depthInfo;
 
-        std::array<VkWriteDescriptorSet, 4> descriptorWrites{ 
+        VkWriteDescriptorSet shadowDescriptorWrite{};
+        shadowDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        shadowDescriptorWrite.dstSet = m_descriptorSets[i];
+        shadowDescriptorWrite.dstBinding = 4;
+        shadowDescriptorWrite.dstArrayElement = 0;
+        shadowDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        shadowDescriptorWrite.descriptorCount = 1;
+        shadowDescriptorWrite.pImageInfo = &shadowInfo;
+
+        std::array<VkWriteDescriptorSet, 5> descriptorWrites{ 
             uniformBufferDescriptorWrite,
             albedoDescriptorWrite,
             normalDescriptorWrite,
-            depthDescriptorWrite
+            depthDescriptorWrite,
+            shadowDescriptorWrite
         };
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
@@ -343,15 +386,21 @@ LightingPass::~LightingPass()
     vkDestroyDescriptorPool(m_vkDevice, m_descriptorPool, nullptr);
 }
 
-void LightingPass::render(VkCommandBuffer commandBuffer, uint32_t buffedIdx)
+void LightingPass::render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
 {
-    LightingPass::Transforms transforms{};
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), Renderer::WINDOW_WIDTH / static_cast<float>(Renderer::WINDOW_HEIGHT), 0.1f, 10.0f);
-    projection[1][1] *= -1;
-    transforms.projInverse = glm::inverse(projection);
-    
-    m_uniformBuffers[buffedIdx]->update(&transforms, sizeof(LightingPass::Transforms));
+    begin(commandBuffer, m_frameBufferIdx);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[buffedIdx], 0, nullptr);
+    scene->m_cameras[Camera::Type::LIGHT]->bind(commandBuffer, m_pipelineLayout, bufferIdx, dt);
+
+    LightingPass::Transforms transforms{};
+    transforms.projInverse = glm::inverse(scene->m_cameras[Camera::Type::NORMAL]->m_projection);
+    transforms.viewInverse = glm::inverse(scene->m_cameras[Camera::Type::NORMAL]->m_view);
+    transforms.lightDir = scene->m_cameras[Camera::Type::LIGHT]->m_direction;
+    
+    m_uniformBuffers[bufferIdx]->update(&transforms, sizeof(LightingPass::Transforms));
+
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[bufferIdx], 0, nullptr);
     vkCmdDraw(commandBuffer, 4, 1, 0, 0);
+
+    end(commandBuffer);
 }

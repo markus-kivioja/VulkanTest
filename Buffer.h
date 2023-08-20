@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 
 class SceneObject;
+class Camera;
 class LightingPass;
 
 class Buffer
@@ -15,6 +16,7 @@ public:
 	void update(void* data, size_t size);
 private:
 	friend SceneObject;
+	friend Camera;
 	friend LightingPass;
 
 	VkDevice m_device{ VK_NULL_HANDLE };

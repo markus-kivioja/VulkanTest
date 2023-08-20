@@ -95,10 +95,15 @@ void RenderPass::end(VkCommandBuffer commandBuffer)
 
 RenderPass::~RenderPass()
 {
-    if (m_descriptorSetLayout != VK_NULL_HANDLE)
+    if (m_modelSetLayout != VK_NULL_HANDLE)
     {
-        vkDestroyDescriptorSetLayout(m_vkDevice, m_descriptorSetLayout, nullptr);
-        m_descriptorSetLayout = VK_NULL_HANDLE;
+        vkDestroyDescriptorSetLayout(m_vkDevice, m_modelSetLayout, nullptr);
+        m_modelSetLayout = VK_NULL_HANDLE;
+    }
+    if (m_cameraSetLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyDescriptorSetLayout(m_vkDevice, m_cameraSetLayout, nullptr);
+        m_cameraSetLayout = VK_NULL_HANDLE;
     }
     if (m_pipeline != VK_NULL_HANDLE)
     {

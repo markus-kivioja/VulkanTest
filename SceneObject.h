@@ -1,6 +1,8 @@
 #pragma once
 
 #include "GBufferPass.h"
+#include "Buffer.h"
+#include "Texture.h"
 
 #include <vulkan/vulkan.h>
 
@@ -8,19 +10,17 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include "Buffer.h"
-#include "Texture.h"
-
 class Camera;
 
 class SceneObject
 {
 public:
 	SceneObject(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer,
-		VkPipelineLayout pipelineLayout, VkDescriptorSetAllocateInfo descriptorSetAllocInfo);
+		VkDescriptorSetAllocateInfo descSetAllocInfo);
 	~SceneObject();
 
-	void render(VkCommandBuffer commandBuffer, uint32_t buffedIdx, Camera* camera, float dt);
+	void update(uint32_t bufferIdx, float dt);
+	void render(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t bufferIdx, float dt);
 private:
 	inline static const std::string MESH_FILENAME = "assets/mickey.obj" ;
 	inline static const std::string ALBEDO_FILENAME = "assets/mickey.png" ;
@@ -34,7 +34,6 @@ private:
 	std::vector<VertexCacheEntry*> m_vertexCache;
 
 	std::vector<VkDescriptorSet> m_descriptorSets;
-	VkPipelineLayout m_pipelineLayout{ VK_NULL_HANDLE };
 
 	std::unique_ptr<Buffer> m_vertexBuffer;
 	std::unique_ptr<Buffer> m_indexBuffer;

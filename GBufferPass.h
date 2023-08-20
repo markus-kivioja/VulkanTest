@@ -14,14 +14,18 @@ public:
 		glm::vec3 normal;
 		glm::vec2 uvCoord;
 	};
-	struct Transforms {
+	struct ModelTransforms {
 		glm::mat4 model;
+	};
+	struct CameraTransforms {
 		glm::mat4 view;
 		glm::mat4 projection;
 	};
 
 	GBufferPass(VkDevice device, std::vector<Texture*> colorTargets, Texture* depthTarget);
 	virtual ~GBufferPass();
+
+	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
 private:
 };
 
