@@ -1,6 +1,7 @@
 #include "Renderer.h"
 
 #include "Scene.h"
+#include "SkyPass.h"
 #include "GBufferPass.h"
 #include "ShadowPass.h"
 #include "LightingPass.h"
@@ -41,6 +42,9 @@ Renderer::Renderer()
     }
 
     m_renderPasses.resize(RenderPassId::COUNT);
+
+    std::vector<Texture*> skyTargets{ m_gBufferAlbedo.get() };
+    m_renderPasses[RenderPassId::SKY] = std::make_unique<SkyPass>(m_vkPhysicalDevice, m_vkDevice, skyTargets);
 
     std::vector<Texture*> gBufferColorTargets{m_gBufferAlbedo.get(), m_gBufferNormal.get()};
     m_renderPasses[RenderPassId::GBUFFER] = std::make_unique<GBufferPass>(m_vkDevice, gBufferColorTargets, m_depthBuffer.get());

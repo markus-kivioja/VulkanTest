@@ -175,6 +175,7 @@
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneObject.cpp" />
     <ClCompile Include="ShadowPass.cpp" />
+    <ClCompile Include="SkyPass.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="RenderThreadPool.cpp" />
   </ItemGroup>
@@ -199,6 +200,7 @@
     <ClInclude Include="Scene.h" />
     <ClInclude Include="SceneObject.h" />
     <ClInclude Include="ShadowPass.h" />
+    <ClInclude Include="SkyPass.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="RenderThreadPool.h" />

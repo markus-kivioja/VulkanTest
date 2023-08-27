@@ -68,7 +68,8 @@ private:
 
 	enum RenderPassId
 	{
-		GBUFFER = 0,
+		SKY = 0,
+		GBUFFER,
 		SHADOW,
 		LIGHTING,
 		IMGUI,
