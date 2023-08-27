@@ -36,6 +36,7 @@ void main()
 	vec3 H = normalize(L + V);
 	
 	const float AMBIENT = 0.1f;
+	const float SHININESS = 50.0f;
 
 	// Shadows
 	float shadow = 1.0f;
@@ -52,7 +53,7 @@ void main()
 	float specular = 0;
 	if (diffuse > 0 && shadow == 1.0f)
 	{
-		specular = pow(max(dot(N, H), 0.0), 16.0f);
+		specular = pow(max(dot(N, H), 0.0), SHININESS);
 	}
 
     outColor = texture(albedoSampler, uvCoord) * (AMBIENT + diffuse * shadow) + specular;
