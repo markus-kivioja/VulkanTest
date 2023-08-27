@@ -110,7 +110,7 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                 for (auto& hostSignal : renderJob.hostSignals)
                 {
                     {
-                        std::unique_lock lock(m_mutex);
+                        std::unique_lock lock(hostSignal->mutex);
                         hostSignal->signaled = true;
                     }
                     hostSignal->cv.notify_all();
