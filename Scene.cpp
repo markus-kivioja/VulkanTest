@@ -4,6 +4,10 @@
 #include "Mickey.h"
 #include "Floor.h"
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_vulkan.h"
+
 #include <iostream>
 #include <array>
 
@@ -84,6 +88,8 @@ Scene::Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice d
     }
     m_objects.push_back(std::make_unique<Floor>(OBJECT_COUNT, physicalDevice, device, copyCommandBuffer, modelDescSetAllocInfo));
 
+    ImGui_ImplVulkan_CreateFontsTexture(copyCommandBuffer);
+
     vkEndCommandBuffer(copyCommandBuffer);
 
     VkSubmitInfo submitInfo{};
@@ -93,6 +99,8 @@ Scene::Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice d
 
     vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(queue);
+
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
 
     vkFreeCommandBuffers(device, copyCommandPool, 1, &copyCommandBuffer);
     vkDestroyCommandPool(device, copyCommandPool, nullptr);

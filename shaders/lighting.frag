@@ -35,6 +35,8 @@ void main()
 	vec3 V = normalize(-viewSpacePos);
 	vec3 H = normalize(L + V);
 	
+	const float AMBIENT = 0.1f;
+
 	// Shadows
 	float shadow = 1.0f;
 	vec4 lightNDC = lightTransform.projection * lightTransform.view * worldSpacePos;
@@ -43,16 +45,15 @@ void main()
 	const float SHADOW_BIAS = 0.001f;
 	if (lightNDC.z > texture(shadowSampler, shadowMapUV).r + SHADOW_BIAS)
 	{
-		shadow = 0.2f;
+		shadow = 0.0f;
 	}
 	
-	const float ambient = 0.4f;
-	float diffuse = max(dot(N, L), 0.0);
+	float diffuse = max(dot(N, L), 0.0) * 0.5f;
 	float specular = 0;
 	if (diffuse > 0 && shadow == 1.0f)
 	{
 		specular = pow(max(dot(N, H), 0.0), 16.0f);
 	}
 
-    outColor = texture(albedoSampler, uvCoord) * (ambient + diffuse) * shadow + specular;
+    outColor = texture(albedoSampler, uvCoord) * (AMBIENT + diffuse * shadow) + specular;
 }

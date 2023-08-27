@@ -4,9 +4,15 @@
 #include "GBufferPass.h"
 #include "ShadowPass.h"
 #include "LightingPass.h"
+#include "ImguiPass.h"
 #include "RenderThreadPool.h"
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_vulkan.h"
+
 #include <iostream>
+#include <array>
 
 Renderer::Renderer()
 {
@@ -31,7 +37,7 @@ Renderer::Renderer()
     vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapChain, &imageCount, swapChainImages.data());
     for (auto const& image : swapChainImages)
     {
-        m_frameBuffers.push_back(std::make_unique<Texture>(m_vkDevice, WINDOW_WIDTH, WINDOW_HEIGHT, VK_FORMAT_B8G8R8A8_UNORM, image));
+        m_frameBuffers.push_back(std::make_unique<Texture>(m_vkDevice, WINDOW_WIDTH, WINDOW_HEIGHT, VK_FORMAT_B8G8R8A8_SRGB, image));
     }
 
     m_renderPasses.resize(RenderPassId::COUNT);
@@ -42,13 +48,22 @@ Renderer::Renderer()
     std::vector<Texture*> shadowPassDepthTargets{ m_shadowMap.get() };
     m_renderPasses[RenderPassId::SHADOW] = std::make_unique<ShadowPass>(m_vkPhysicalDevice, m_vkDevice, shadowPassDepthTargets);
 
-    std::vector<Texture*> lightingColorTargets;
+    std::vector<Texture*> onScreenColorTargets;
     for (auto& framebuffer : m_frameBuffers)
     {
-        lightingColorTargets.push_back(framebuffer.get());
+        onScreenColorTargets.push_back(framebuffer.get());
     }
     std::vector<Texture*> lightingSrcTextures{ m_gBufferAlbedo.get(), m_gBufferNormal.get(), m_depthBuffer.get(), m_shadowMap.get() };
-    m_renderPasses[RenderPassId::LIGHTING] = std::make_unique<LightingPass>(m_vkPhysicalDevice, m_vkDevice, lightingColorTargets, lightingSrcTextures);
+    m_renderPasses[RenderPassId::LIGHTING] = std::make_unique<LightingPass>(m_vkPhysicalDevice, m_vkDevice, onScreenColorTargets, lightingSrcTextures);
+
+    ImguiPass::InitInfo imguiInitInfo{};
+    imguiInitInfo.instance = m_vkInstance;
+    imguiInitInfo.physicalDevice = m_vkPhysicalDevice;
+    imguiInitInfo.queueFamilyIdx = m_queueFamilyIdx;
+    imguiInitInfo.minImageCount = m_minImageCount;
+    imguiInitInfo.imageCount = imageCount;
+    imguiInitInfo.queue = m_presentQueue;
+    m_renderPasses[RenderPassId::IMGUI] = std::make_unique<ImguiPass>(imguiInitInfo, m_vkDevice, onScreenColorTargets);
 
     m_scene = std::make_unique<Scene>(m_renderPasses[RenderPassId::GBUFFER].get(), m_vkPhysicalDevice, m_vkDevice, m_presentQueue, m_queueFamilyIdx);
 
@@ -162,6 +177,7 @@ void Renderer::initVulkan()
 
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_vkPhysicalDevice, m_vkSurface, &surfaceCapabilities);
+    m_minImageCount = surfaceCapabilities.minImageCount;
     uint32_t presentModeCount;
     vkGetPhysicalDeviceSurfacePresentModesKHR(m_vkPhysicalDevice, m_vkSurface, &presentModeCount, nullptr);
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
@@ -173,8 +189,8 @@ void Renderer::initVulkan()
     VkSwapchainCreateInfoKHR swapChainCreateInfo{};
     swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapChainCreateInfo.surface = m_vkSurface;
-    swapChainCreateInfo.minImageCount = surfaceCapabilities.minImageCount;
-    swapChainCreateInfo.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+    swapChainCreateInfo.minImageCount = m_minImageCount;
+    swapChainCreateInfo.imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
     swapChainCreateInfo.imageColorSpace = formats[0].colorSpace;
     swapChainCreateInfo.imageExtent = surfaceCapabilities.currentExtent;
     swapChainCreateInfo.imageArrayLayers = 1;
@@ -231,17 +247,6 @@ void Renderer::initVulkan()
             std::terminate();
         }
     }
-    m_lightingPassFinished.resize(BUFFER_COUNT);
-    for (auto& semaphore : m_lightingPassFinished)
-    {
-        result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
-        if (result != VK_SUCCESS)
-        {
-            std::cout << "Failed to create \"render finished\" semaphore" << std::endl;
-            std::terminate();
-        }
-    }
-
     m_gBufferPassFinished.resize(BUFFER_COUNT);
     for (auto& semaphore : m_gBufferPassFinished)
     {
@@ -252,7 +257,6 @@ void Renderer::initVulkan()
             std::terminate();
         }
     }
-
     m_shadowPassFinished.resize(BUFFER_COUNT);
     for (auto& semaphore : m_shadowPassFinished)
     {
@@ -260,6 +264,26 @@ void Renderer::initVulkan()
         if (result != VK_SUCCESS)
         {
             std::cout << "Failed to create \"shadow pass finished\" semaphore" << std::endl;
+            std::terminate();
+        }
+    }
+    m_lightingPassFinished.resize(BUFFER_COUNT);
+    for (auto& semaphore : m_lightingPassFinished)
+    {
+        result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
+        if (result != VK_SUCCESS)
+        {
+            std::cout << "Failed to create \"lighting pass finished\" semaphore" << std::endl;
+            std::terminate();
+        }
+    }
+    m_imguiPassFinished.resize(BUFFER_COUNT);
+    for (auto& semaphore : m_imguiPassFinished)
+    {
+        result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
+        if (result != VK_SUCCESS)
+        {
+            std::cout << "Failed to create \"imgui pass finished\" semaphore" << std::endl;
             std::terminate();
         }
     }
@@ -277,6 +301,13 @@ void Renderer::initVulkan()
             std::terminate();
         }
     }
+
+    // Initialize imgui
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForVulkan(m_window, true);
 }
 
 Renderer::~Renderer()
@@ -285,10 +316,11 @@ Renderer::~Renderer()
 
     for (uint32_t i = 0; i < BUFFER_COUNT; ++i)
     {
-        vkDestroySemaphore(m_vkDevice, m_lightingPassFinished[i], nullptr);
         vkDestroySemaphore(m_vkDevice, m_frameBufferAvailable[i], nullptr);
         vkDestroySemaphore(m_vkDevice, m_gBufferPassFinished[i], nullptr);
         vkDestroySemaphore(m_vkDevice, m_shadowPassFinished[i], nullptr);
+        vkDestroySemaphore(m_vkDevice, m_lightingPassFinished[i], nullptr);
+        vkDestroySemaphore(m_vkDevice, m_imguiPassFinished[i], nullptr);
         vkDestroyFence(m_vkDevice, m_vkFences[i], nullptr);
     }
     vkDestroyCommandPool(m_vkDevice, m_vkCommandPool, nullptr);
@@ -301,6 +333,10 @@ Renderer::~Renderer()
     m_frameBuffers.clear();
     m_scene->clean();
 
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     vkDestroySwapchainKHR(m_vkDevice, m_vkSwapChain, nullptr);
     vkDestroyDevice(m_vkDevice, nullptr);
     vkDestroySurfaceKHR(m_vkInstance, m_vkSurface, nullptr);
@@ -311,6 +347,12 @@ Renderer::~Renderer()
 
 void Renderer::beginFrame()
 {
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ImGui::ShowDemoWindow(nullptr);
+    ImGui::Render();
+
     vkWaitForFences(m_vkDevice, 1, &m_vkFences[m_bufferIdx], VK_TRUE, UINT64_MAX);
     vkResetFences(m_vkDevice, 1, &m_vkFences[m_bufferIdx]);
 
@@ -322,7 +364,7 @@ void Renderer::endFrame()
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-    VkSemaphore waitSemaphores[] = { m_lightingPassFinished[m_bufferIdx] };
+    VkSemaphore waitSemaphores[] = { m_imguiPassFinished[m_bufferIdx] };
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = waitSemaphores;
 
@@ -333,12 +375,12 @@ void Renderer::endFrame()
     presentInfo.pImageIndices = &m_frameBufferIdx;
 
     {
-        std::unique_lock lock(m_lightingPassSubmitted.mutex);
-        m_lightingPassSubmitted.cv.wait(lock, [this]()
+        std::unique_lock lock(m_imguiPassSubmitted.mutex);
+        m_imguiPassSubmitted.cv.wait(lock, [this]()
             {
-                return m_lightingPassSubmitted.signaled;
+                return m_imguiPassSubmitted.signaled;
             });
-        m_lightingPassSubmitted.signaled = false;
+        m_imguiPassSubmitted.signaled = false;
     }
 
     vkQueuePresentKHR(m_presentQueue, &presentInfo);
@@ -388,7 +430,6 @@ void Renderer::render()
         // Create the lighting render job
         RenderThreadPool::RenderJob lightingJob{};
         lightingJob.bufferIdx = m_bufferIdx;
-        lightingJob.fence = m_vkFences[m_bufferIdx];
         lightingJob.waitSemaphores = std::vector<VkSemaphore>{
             m_gBufferPassFinished[m_bufferIdx],
             m_shadowPassFinished[m_bufferIdx],
@@ -402,11 +443,28 @@ void Renderer::render()
             m_renderPasses[LIGHTING]->setFrameBufferIdx(m_frameBufferIdx);
             m_renderPasses[LIGHTING]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
         };
+
+        // Create the lighting GUI job
+        RenderThreadPool::RenderJob imguiJob{};
+        imguiJob.bufferIdx = m_bufferIdx;
+        imguiJob.fence = m_vkFences[m_bufferIdx];
+        imguiJob.waitSemaphores = std::vector<VkSemaphore>{
+            m_lightingPassFinished[m_bufferIdx]
+        };
+        imguiJob.hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_lightingPassSubmitted };
+        imguiJob.signalSemaphores = std::vector<VkSemaphore>{ m_imguiPassFinished[m_bufferIdx] };
+        imguiJob.hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_imguiPassSubmitted };
+        imguiJob.job = [this, dt](VkCommandBuffer commandBuffer)
+        {
+            m_renderPasses[IMGUI]->setFrameBufferIdx(m_frameBufferIdx);
+            m_renderPasses[IMGUI]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
+        };
         
         // Give the rendering jobs to the thread pool
         m_renderThreadPool->addJob(gBufferJob);
         m_renderThreadPool->addJob(shadowMapJob);
         m_renderThreadPool->addJob(lightingJob);
+        m_renderThreadPool->addJob(imguiJob);
 
         endFrame();
 

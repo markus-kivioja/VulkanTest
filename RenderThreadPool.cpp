@@ -92,7 +92,7 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                 for (auto& hostWait : renderJob.hostWaits)
                 {
                     std::unique_lock lock(hostWait->mutex);
-                    hostWait->cv.wait(lock, [hostWait]()
+                    hostWait->cv.wait(lock, [&hostWait]()
                     {
                         return hostWait->signaled;
                     });
@@ -113,7 +113,7 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                         std::unique_lock lock(m_mutex);
                         hostSignal->signaled = true;
                     }
-                    hostSignal->cv.notify_one();
+                    hostSignal->cv.notify_all();
                 }
             }
             vkDestroyCommandPool(device, commandPool, nullptr);

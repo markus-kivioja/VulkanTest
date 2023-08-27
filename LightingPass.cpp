@@ -13,7 +13,7 @@ LightingPass::LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std
     m_hasDepthAttachment = false;
 
     VkAttachmentDescription colorAttachmentDescription{};
-    colorAttachmentDescription.format = VK_FORMAT_B8G8R8A8_UNORM;
+    colorAttachmentDescription.format = colorTargets[0]->m_format;
     colorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;

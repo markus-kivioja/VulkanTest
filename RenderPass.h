@@ -15,7 +15,7 @@ public:
 	RenderPass(VkDevice device, uint32_t colorTargetCount);
 	virtual ~RenderPass();
 
-	virtual void setFrameBufferIdx(uint32_t frameBufferIdx) {};
+	void setFrameBufferIdx(uint32_t frameBufferIdx) { m_frameBufferIdx = frameBufferIdx; };
 
 	void begin(VkCommandBuffer commandBuffer, uint32_t bufferIdx = 0);
 	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) = 0;
@@ -41,5 +41,7 @@ protected:
 	uint32_t m_targetHeight{ 0 };
 	uint32_t m_colorTargetCount{ 1 };
 	bool m_hasDepthAttachment{ false };
+
+	uint32_t m_frameBufferIdx{ 0 };
 };
 

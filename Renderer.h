@@ -24,8 +24,8 @@ class Renderer
 public:
 	static constexpr uint32_t BUFFER_COUNT = 2;
 
-	static constexpr uint32_t WINDOW_WIDTH = 1024;
-	static constexpr uint32_t WINDOW_HEIGHT = 768;
+	static constexpr uint32_t WINDOW_WIDTH = 3840;
+	static constexpr uint32_t WINDOW_HEIGHT = 2160;
 
 	Renderer();
 	~Renderer();
@@ -46,15 +46,18 @@ private:
 	std::vector<VkCommandBuffer> m_vkCommandBuffers;
 	VkSurfaceKHR m_vkSurface{ VK_NULL_HANDLE };
 	VkSwapchainKHR m_vkSwapChain{ VK_NULL_HANDLE };
+
 	std::vector<VkSemaphore> m_frameBufferAvailable{ VK_NULL_HANDLE };
 	std::vector<VkSemaphore> m_gBufferPassFinished{ VK_NULL_HANDLE };
 	std::vector<VkSemaphore> m_shadowPassFinished{ VK_NULL_HANDLE };
 	std::vector<VkSemaphore> m_lightingPassFinished{ VK_NULL_HANDLE };
+	std::vector<VkSemaphore> m_imguiPassFinished{ VK_NULL_HANDLE };
 	std::vector<VkFence> m_vkFences{ VK_NULL_HANDLE };
 
 	RenderThreadPool::HostSemaphore m_gBufferPassSubmitted;
 	RenderThreadPool::HostSemaphore m_shadowPassSubmitted;
 	RenderThreadPool::HostSemaphore m_lightingPassSubmitted;
+	RenderThreadPool::HostSemaphore m_imguiPassSubmitted;
 
 	std::unique_ptr<Texture> m_gBufferAlbedo;
 	std::unique_ptr<Texture> m_gBufferNormal;
@@ -68,6 +71,7 @@ private:
 		GBUFFER = 0,
 		SHADOW,
 		LIGHTING,
+		IMGUI,
 		COUNT
 	};
 	std::vector< std::unique_ptr<RenderPass>> m_renderPasses;
@@ -75,6 +79,7 @@ private:
 	uint32_t m_bufferIdx{ 0 };
 	uint32_t m_frameBufferIdx{ 0 };
 	uint32_t m_queueFamilyIdx{ 0 };
+	uint32_t m_minImageCount{ 0 };
 
 	std::unique_ptr<Scene> m_scene;
 

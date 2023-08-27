@@ -17,8 +17,6 @@ public:
 	virtual ~LightingPass();
 
 	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
-
-	virtual void setFrameBufferIdx(uint32_t frameBufferIdx) override { m_frameBufferIdx = frameBufferIdx; };
 private:
 	struct Transforms {
 		glm::mat4 projInverse;
@@ -29,7 +27,5 @@ private:
 	VkDescriptorPool m_descriptorPool{ VK_NULL_HANDLE };
 	std::vector<VkDescriptorSet> m_descriptorSets;
 	std::vector<std::unique_ptr<Buffer>> m_uniformBuffers;
-
-	uint32_t m_frameBufferIdx{ 0 };
 };
 

@@ -7,6 +7,7 @@
 class GBufferPass;
 class ShadowPass;
 class LightingPass;
+class ImguiPass;
 class SceneObject;
 class Renderer;
 
@@ -22,6 +23,7 @@ private:
 	friend GBufferPass;
 	friend ShadowPass;
 	friend LightingPass;
+	friend ImguiPass;
 	friend SceneObject;
 	friend Renderer;
 
