@@ -13,7 +13,7 @@
 class LightingPass : public RenderPass
 {
 public:
-	LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*> colorTargets, std::vector<Texture*> srcTextures);
+	LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& colorTargets, std::vector<Texture*>& srcTextures);
 	virtual ~LightingPass();
 
 	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;

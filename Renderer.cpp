@@ -72,6 +72,33 @@ Renderer::Renderer()
     m_scene = std::make_unique<Scene>(m_renderPasses[RenderPassId::GBUFFER].get(), m_vkPhysicalDevice, m_vkDevice, m_presentQueue, m_queueFamilyIdx);
 
     m_renderThreadPool = std::make_unique<RenderThreadPool>(m_vkDevice, m_queueFamilyIdx, m_threadCount);
+
+    // Create the render jobs
+    for (uint32_t bufferIdx = 0; bufferIdx < BUFFER_COUNT; ++bufferIdx)
+    {
+        m_gBufferJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_gBufferPassFinished[bufferIdx] };
+        m_gBufferJobs[bufferIdx].hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_gBufferPassSubmitted };
+
+        m_shadowMapJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_shadowPassFinished[bufferIdx] };
+        m_shadowMapJobs[bufferIdx].hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_shadowPassSubmitted };
+
+        m_lightingJobs[bufferIdx].waitSemaphores = std::vector<VkSemaphore>{
+            m_gBufferPassFinished[bufferIdx],
+            m_shadowPassFinished[bufferIdx],
+            m_frameBufferAvailable[bufferIdx]
+        };
+        m_lightingJobs[bufferIdx].hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_gBufferPassSubmitted, &m_shadowPassSubmitted };
+        m_lightingJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_lightingPassFinished[bufferIdx] };
+        m_lightingJobs[bufferIdx].hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_lightingPassSubmitted };
+
+        m_imguiJobs[bufferIdx].fence = m_vkFences[bufferIdx];
+        m_imguiJobs[bufferIdx].waitSemaphores = std::vector<VkSemaphore>{
+            m_lightingPassFinished[bufferIdx]
+        };
+        m_imguiJobs[bufferIdx].hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_lightingPassSubmitted };
+        m_imguiJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_imguiPassFinished[bufferIdx] };
+        m_imguiJobs[bufferIdx].hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_imguiPassSubmitted };
+    }
 }
 
 void Renderer::initVulkan()
@@ -217,7 +244,6 @@ void Renderer::initVulkan()
 
     VkSemaphoreCreateInfo semaphoreCreateInfo{};
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    m_frameBufferAvailable.resize(BUFFER_COUNT);
     for (auto& semaphore : m_frameBufferAvailable)
     {
         result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
@@ -227,7 +253,6 @@ void Renderer::initVulkan()
             std::terminate();
         }
     }
-    m_gBufferPassFinished.resize(BUFFER_COUNT);
     for (auto& semaphore : m_gBufferPassFinished)
     {
         result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
@@ -237,7 +262,6 @@ void Renderer::initVulkan()
             std::terminate();
         }
     }
-    m_shadowPassFinished.resize(BUFFER_COUNT);
     for (auto& semaphore : m_shadowPassFinished)
     {
         result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
@@ -247,7 +271,6 @@ void Renderer::initVulkan()
             std::terminate();
         }
     }
-    m_lightingPassFinished.resize(BUFFER_COUNT);
     for (auto& semaphore : m_lightingPassFinished)
     {
         result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
@@ -257,7 +280,6 @@ void Renderer::initVulkan()
             std::terminate();
         }
     }
-    m_imguiPassFinished.resize(BUFFER_COUNT);
     for (auto& semaphore : m_imguiPassFinished)
     {
         result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
@@ -271,7 +293,6 @@ void Renderer::initVulkan()
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    m_vkFences.resize(BUFFER_COUNT);
     for (auto& fence : m_vkFences)
     {
         result = vkCreateFence(m_vkDevice, &fenceCreateInfo, nullptr, &fence);
@@ -386,60 +407,33 @@ void Renderer::render()
         float dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - prevTime).count();
         prevTime = currentTime;
 
-        // Create the G-buffer render job
-        RenderThreadPool::RenderJob gBufferJob{};
-        gBufferJob.signalSemaphores = std::vector<VkSemaphore>{ m_gBufferPassFinished[m_bufferIdx] };
-        gBufferJob.hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_gBufferPassSubmitted };
-        gBufferJob.job = [this, dt](VkCommandBuffer commandBuffer)
+        m_gBufferJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
         {
             m_renderPasses[GBUFFER]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
         };
 
-        // Create the shadow map render job
-        RenderThreadPool::RenderJob shadowMapJob{};
-        shadowMapJob.signalSemaphores = std::vector<VkSemaphore>{ m_shadowPassFinished[m_bufferIdx] };
-        shadowMapJob.hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_shadowPassSubmitted };
-        shadowMapJob.job = [this, dt](VkCommandBuffer commandBuffer)
+        m_shadowMapJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
         {
             m_renderPasses[SHADOW]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
         };
 
-        // Create the lighting render job
-        RenderThreadPool::RenderJob lightingJob{};
-        lightingJob.waitSemaphores = std::vector<VkSemaphore>{
-            m_gBufferPassFinished[m_bufferIdx],
-            m_shadowPassFinished[m_bufferIdx],
-            m_frameBufferAvailable[m_bufferIdx]
-        };
-        lightingJob.hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_gBufferPassSubmitted, &m_shadowPassSubmitted };
-        lightingJob.signalSemaphores = std::vector<VkSemaphore>{ m_lightingPassFinished[m_bufferIdx] };
-        lightingJob.hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_lightingPassSubmitted };
-        lightingJob.job = [this, dt](VkCommandBuffer commandBuffer)
+        m_lightingJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
         {
             m_renderPasses[LIGHTING]->setFrameBufferIdx(m_frameBufferIdx);
             m_renderPasses[LIGHTING]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
         };
 
-        // Create the GUI job
-        RenderThreadPool::RenderJob imguiJob{};
-        imguiJob.fence = m_vkFences[m_bufferIdx];
-        imguiJob.waitSemaphores = std::vector<VkSemaphore>{
-            m_lightingPassFinished[m_bufferIdx]
-        };
-        imguiJob.hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_lightingPassSubmitted };
-        imguiJob.signalSemaphores = std::vector<VkSemaphore>{ m_imguiPassFinished[m_bufferIdx] };
-        imguiJob.hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_imguiPassSubmitted };
-        imguiJob.job = [this, dt](VkCommandBuffer commandBuffer)
+        m_imguiJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
         {
             m_renderPasses[IMGUI]->setFrameBufferIdx(m_frameBufferIdx);
             m_renderPasses[IMGUI]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
         };
         
         // Give the rendering jobs to the thread pool
-        m_renderThreadPool->addJob(gBufferJob);
-        m_renderThreadPool->addJob(shadowMapJob);
-        m_renderThreadPool->addJob(lightingJob);
-        m_renderThreadPool->addJob(imguiJob);
+        m_renderThreadPool->addJob(&m_gBufferJobs[m_bufferIdx]);
+        m_renderThreadPool->addJob(&m_shadowMapJobs[m_bufferIdx]);
+        m_renderThreadPool->addJob(&m_lightingJobs[m_bufferIdx]);
+        m_renderThreadPool->addJob(&m_imguiJobs[m_bufferIdx]);
 
         endFrame();
 

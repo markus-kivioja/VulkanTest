@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <array>
 #include <memory>
 #include <condition_variable>
 
@@ -45,12 +46,17 @@ private:
 	VkSurfaceKHR m_vkSurface{ VK_NULL_HANDLE };
 	VkSwapchainKHR m_vkSwapChain{ VK_NULL_HANDLE };
 
-	std::vector<VkSemaphore> m_frameBufferAvailable{ VK_NULL_HANDLE };
-	std::vector<VkSemaphore> m_gBufferPassFinished{ VK_NULL_HANDLE };
-	std::vector<VkSemaphore> m_shadowPassFinished{ VK_NULL_HANDLE };
-	std::vector<VkSemaphore> m_lightingPassFinished{ VK_NULL_HANDLE };
-	std::vector<VkSemaphore> m_imguiPassFinished{ VK_NULL_HANDLE };
-	std::vector<VkFence> m_vkFences{ VK_NULL_HANDLE };
+	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_gBufferJobs;
+	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_shadowMapJobs;
+	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_lightingJobs;
+	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_imguiJobs;
+
+	std::array<VkSemaphore, BUFFER_COUNT> m_frameBufferAvailable{ VK_NULL_HANDLE };
+	std::array<VkSemaphore, BUFFER_COUNT> m_gBufferPassFinished{ VK_NULL_HANDLE };
+	std::array<VkSemaphore, BUFFER_COUNT> m_shadowPassFinished{ VK_NULL_HANDLE };
+	std::array<VkSemaphore, BUFFER_COUNT> m_lightingPassFinished{ VK_NULL_HANDLE };
+	std::array<VkSemaphore, BUFFER_COUNT> m_imguiPassFinished{ VK_NULL_HANDLE };
+	std::array<VkFence, BUFFER_COUNT> m_vkFences{ VK_NULL_HANDLE };
 
 	RenderThreadPool::HostSemaphore m_gBufferPassSubmitted;
 	RenderThreadPool::HostSemaphore m_shadowPassSubmitted;

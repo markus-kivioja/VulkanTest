@@ -13,7 +13,7 @@
 class SkyPass : public RenderPass
 {
 public:
-	SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*> colorTargets);
+	SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& colorTargets);
 
 	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
 private:

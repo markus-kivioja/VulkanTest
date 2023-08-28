@@ -7,7 +7,7 @@
 #include <array>
 #include <iostream>
 
-LightingPass::LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*> colorTargets, std::vector<Texture*> srcTextures) :
+LightingPass::LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& colorTargets, std::vector<Texture*>& srcTextures) :
 	RenderPass::RenderPass(device, 1)
 {
     m_hasDepthAttachment = false;

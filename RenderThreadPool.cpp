@@ -56,7 +56,7 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
             // Take render jobs from the job queue and execute them
             while (true)
             {
-                RenderJob renderJob;
+                RenderJob* renderJob;
                 {
                     std::unique_lock lock(m_mutex);
                     m_conditionVariable.wait(lock, [this]()
@@ -67,7 +67,7 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                     {
                         break;
                     }
-                    renderJob = std::move(m_renderJobs.front());
+                    renderJob = m_renderJobs.front();
                     m_renderJobs.pop();
                 }
 
@@ -92,7 +92,7 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                     std::terminate();
                 }
 
-                renderJob.job(commandBuffers[bufferIdx]);
+                renderJob->job(commandBuffers[bufferIdx]);
 
                 result = vkEndCommandBuffer(commandBuffers[bufferIdx]);
                 if (result != VK_SUCCESS) {
@@ -101,17 +101,17 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                 }
                 VkSubmitInfo submitInfo{};
                 submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-                submitInfo.waitSemaphoreCount = static_cast<uint32_t>(renderJob.waitSemaphores.size());
-                submitInfo.pWaitSemaphores = renderJob.waitSemaphores.data();
-                std::vector<VkPipelineStageFlags> waitStages(renderJob.waitSemaphores.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+                submitInfo.waitSemaphoreCount = static_cast<uint32_t>(renderJob->waitSemaphores.size());
+                submitInfo.pWaitSemaphores = renderJob->waitSemaphores.data();
+                std::vector<VkPipelineStageFlags> waitStages(renderJob->waitSemaphores.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
                 submitInfo.pWaitDstStageMask = waitStages.data();
                 submitInfo.commandBufferCount = 1;
                 submitInfo.pCommandBuffers = &commandBuffers[bufferIdx];
-                submitInfo.signalSemaphoreCount = static_cast<uint32_t>(renderJob.signalSemaphores.size());
-                submitInfo.pSignalSemaphores = renderJob.signalSemaphores.data();
+                submitInfo.signalSemaphoreCount = static_cast<uint32_t>(renderJob->signalSemaphores.size());
+                submitInfo.pSignalSemaphores = renderJob->signalSemaphores.data();
 
                 // Must wait for the command buffers that signal Vulkan semaphores to be submitted before submitting a waiting command buffer
-                for (auto& hostWait : renderJob.hostWaits)
+                for (auto& hostWait : renderJob->hostWaits)
                 {
                     std::unique_lock lock(hostWait->mutex);
                     hostWait->cv.wait(lock, [&hostWait]()
@@ -129,13 +129,13 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                 }
 
                 // Signal the main thread if needed
-                if (renderJob.fence != VK_NULL_HANDLE)
+                if (renderJob->fence != VK_NULL_HANDLE)
                 {
-                    vkQueueSubmit(queue, 0, nullptr, renderJob.fence);
+                    vkQueueSubmit(queue, 0, nullptr, renderJob->fence);
                 }
 
                 // Tell other threads that the command buffer which signals the Vulkan sempahore has been submitted
-                for (auto& hostSignal : renderJob.hostSignals)
+                for (auto& hostSignal : renderJob->hostSignals)
                 {
                     {
                         std::unique_lock lock(hostSignal->mutex);
@@ -153,7 +153,7 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
     }
 }
 
-void RenderThreadPool::addJob(RenderJob job)
+void RenderThreadPool::addJob(RenderJob* job)
 {
     {
         std::unique_lock lock(m_mutex);

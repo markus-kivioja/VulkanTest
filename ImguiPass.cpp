@@ -6,7 +6,7 @@
 #include <iostream>
 #include <array>
 
-ImguiPass::ImguiPass(InitInfo initInfo, VkDevice device, std::vector<Texture*> colorTargets) :
+ImguiPass::ImguiPass(InitInfo initInfo, VkDevice device, std::vector<Texture*>& colorTargets) :
     ImguiPass::RenderPass(device, 1)
 {
     m_hasDepthAttachment = false;

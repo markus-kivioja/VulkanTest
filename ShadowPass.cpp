@@ -7,7 +7,7 @@
 #include <iostream>
 #include <array>
 
-ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*> depthTargets) :
+ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& depthTargets) :
     RenderPass::RenderPass(device, 0)
 {
     m_hasDepthAttachment = true;

@@ -6,7 +6,7 @@
 #include <iostream>
 #include <array>
 
-GBufferPass::GBufferPass(VkDevice device, std::vector<Texture*> colorTargets, Texture* depthTarget) :
+GBufferPass::GBufferPass(VkDevice device, std::vector<Texture*>& colorTargets, Texture* depthTarget) :
 	RenderPass::RenderPass(device, 2)
 {
     m_hasDepthAttachment = true;

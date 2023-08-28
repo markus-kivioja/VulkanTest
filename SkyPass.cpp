@@ -1,6 +1,6 @@
 #include "SkyPass.h"
 
-SkyPass::SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*> colorTargets) :
+SkyPass::SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& colorTargets) :
 	RenderPass::RenderPass(device, 1)
 {
     m_vertices = {

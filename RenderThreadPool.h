@@ -32,12 +32,12 @@ public:
 
 	void clean();
 
-	void addJob(RenderJob job);
+	void addJob(RenderJob* job);
 private:
 	static constexpr uint32_t COMMAND_BUFFER_COUNT = 5;
 
 	std::vector<std::thread> m_renderThreads;
-	std::queue<RenderJob> m_renderJobs;
+	std::queue<RenderJob*> m_renderJobs;
 
 	std::condition_variable m_conditionVariable;
 	std::mutex m_mutex;
