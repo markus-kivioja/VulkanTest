@@ -24,8 +24,8 @@ class Renderer
 public:
 	static constexpr uint32_t BUFFER_COUNT = 2;
 
-	static constexpr uint32_t WINDOW_WIDTH = 3840;
-	static constexpr uint32_t WINDOW_HEIGHT = 2160;
+	static constexpr uint32_t WINDOW_WIDTH = 1920;
+	static constexpr uint32_t WINDOW_HEIGHT = 1080;
 
 	Renderer();
 	~Renderer();
@@ -42,8 +42,6 @@ private:
 	VkPhysicalDevice m_vkPhysicalDevice{ VK_NULL_HANDLE };
 	VkDevice m_vkDevice{ VK_NULL_HANDLE };
 	VkQueue m_presentQueue{ VK_NULL_HANDLE };
-	VkCommandPool m_vkCommandPool{ VK_NULL_HANDLE };
-	std::vector<VkCommandBuffer> m_vkCommandBuffers;
 	VkSurfaceKHR m_vkSurface{ VK_NULL_HANDLE };
 	VkSwapchainKHR m_vkSwapChain{ VK_NULL_HANDLE };
 

@@ -215,30 +215,6 @@ void Renderer::initVulkan()
         std::terminate();
     }
 
-    VkCommandPoolCreateInfo commanPoolCreateInfo{};
-    commanPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    commanPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    commanPoolCreateInfo.queueFamilyIndex = m_queueFamilyIdx;
-    result = vkCreateCommandPool(m_vkDevice, &commanPoolCreateInfo, nullptr, &m_vkCommandPool);
-    if (result != VK_SUCCESS)
-    {
-        std::cout << "Failed to create command pool" << std::endl;
-        std::terminate();
-    }
-
-    m_vkCommandBuffers.resize(BUFFER_COUNT);
-    VkCommandBufferAllocateInfo commandBufferAllocInfo{};
-    commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    commandBufferAllocInfo.commandPool = m_vkCommandPool;
-    commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferAllocInfo.commandBufferCount = static_cast<uint32_t>(m_vkCommandBuffers.size());
-    result = vkAllocateCommandBuffers(m_vkDevice, &commandBufferAllocInfo, m_vkCommandBuffers.data());
-    if (result != VK_SUCCESS)
-    {
-        std::cout << "Failed to allocate command buffers" << std::endl;
-        std::terminate();
-    }
-
     VkSemaphoreCreateInfo semaphoreCreateInfo{};
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     m_frameBufferAvailable.resize(BUFFER_COUNT);
@@ -327,7 +303,6 @@ Renderer::~Renderer()
         vkDestroySemaphore(m_vkDevice, m_imguiPassFinished[i], nullptr);
         vkDestroyFence(m_vkDevice, m_vkFences[i], nullptr);
     }
-    vkDestroyCommandPool(m_vkDevice, m_vkCommandPool, nullptr);
 
     m_renderPasses.clear();
     m_gBufferAlbedo.reset();
@@ -413,7 +388,6 @@ void Renderer::render()
 
         // Create the G-buffer render job
         RenderThreadPool::RenderJob gBufferJob{};
-        gBufferJob.bufferIdx = m_bufferIdx;
         gBufferJob.signalSemaphores = std::vector<VkSemaphore>{ m_gBufferPassFinished[m_bufferIdx] };
         gBufferJob.hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_gBufferPassSubmitted };
         gBufferJob.job = [this, dt](VkCommandBuffer commandBuffer)
@@ -423,7 +397,6 @@ void Renderer::render()
 
         // Create the shadow map render job
         RenderThreadPool::RenderJob shadowMapJob{};
-        shadowMapJob.bufferIdx = m_bufferIdx;
         shadowMapJob.signalSemaphores = std::vector<VkSemaphore>{ m_shadowPassFinished[m_bufferIdx] };
         shadowMapJob.hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_shadowPassSubmitted };
         shadowMapJob.job = [this, dt](VkCommandBuffer commandBuffer)
@@ -433,7 +406,6 @@ void Renderer::render()
 
         // Create the lighting render job
         RenderThreadPool::RenderJob lightingJob{};
-        lightingJob.bufferIdx = m_bufferIdx;
         lightingJob.waitSemaphores = std::vector<VkSemaphore>{
             m_gBufferPassFinished[m_bufferIdx],
             m_shadowPassFinished[m_bufferIdx],
@@ -448,9 +420,8 @@ void Renderer::render()
             m_renderPasses[LIGHTING]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
         };
 
-        // Create the lighting GUI job
+        // Create the GUI job
         RenderThreadPool::RenderJob imguiJob{};
-        imguiJob.bufferIdx = m_bufferIdx;
         imguiJob.fence = m_vkFences[m_bufferIdx];
         imguiJob.waitSemaphores = std::vector<VkSemaphore>{
             m_lightingPassFinished[m_bufferIdx]

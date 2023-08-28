@@ -23,7 +23,7 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                 std::terminate();
             }
 
-            std::array<VkCommandBuffer, Renderer::BUFFER_COUNT> commandBuffers;
+            std::array<VkCommandBuffer, COMMAND_BUFFER_COUNT> commandBuffers;
             VkCommandBufferAllocateInfo commandBufferAllocInfo{};
             commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
             commandBufferAllocInfo.commandPool = commandPool;
@@ -34,6 +34,20 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
             {
                 std::cout << "Failed to allocate command buffers" << std::endl;
                 std::terminate();
+            }
+
+            std::array<VkFence, COMMAND_BUFFER_COUNT> fences;
+            VkFenceCreateInfo fenceCreateInfo{};
+            fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            for (auto& fence : fences)
+            {
+                result = vkCreateFence(device, &fenceCreateInfo, nullptr, &fence);
+                if (result != VK_SUCCESS)
+                {
+                    std::cout << "Failed to create fence" << std::endl;
+                    std::terminate();
+                }
             }
 
             VkQueue queue{};
@@ -57,22 +71,30 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                     m_renderJobs.pop();
                 }
 
-                vkResetCommandBuffer(commandBuffers[renderJob.bufferIdx], 0);
+                // Find the first available command buffer
+                uint32_t bufferIdx = 0;
+                while (vkGetFenceStatus(device, fences[bufferIdx]) == VK_NOT_READY)
+                {
+                    bufferIdx = (bufferIdx + 1) % COMMAND_BUFFER_COUNT;
+                }
+                vkResetFences(device, 1, &fences[bufferIdx]);
+
+                vkResetCommandBuffer(commandBuffers[bufferIdx], 0);
 
                 VkCommandBufferBeginInfo beginInfo{};
                 beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
                 beginInfo.flags = 0;
                 beginInfo.pInheritanceInfo = nullptr;
-                VkResult result = vkBeginCommandBuffer(commandBuffers[renderJob.bufferIdx], &beginInfo);
+                VkResult result = vkBeginCommandBuffer(commandBuffers[bufferIdx], &beginInfo);
                 if (result != VK_SUCCESS)
                 {
                     std::cout << "Failed to begin command buffer" << std::endl;
                     std::terminate();
                 }
 
-                renderJob.job(commandBuffers[renderJob.bufferIdx]);
+                renderJob.job(commandBuffers[bufferIdx]);
 
-                result = vkEndCommandBuffer(commandBuffers[renderJob.bufferIdx]);
+                result = vkEndCommandBuffer(commandBuffers[bufferIdx]);
                 if (result != VK_SUCCESS) {
                     std::cout << "Failed to end command buffer" << std::endl;
                     std::terminate();
@@ -84,7 +106,7 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                 std::vector<VkPipelineStageFlags> waitStages(renderJob.waitSemaphores.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
                 submitInfo.pWaitDstStageMask = waitStages.data();
                 submitInfo.commandBufferCount = 1;
-                submitInfo.pCommandBuffers = &commandBuffers[renderJob.bufferIdx];
+                submitInfo.pCommandBuffers = &commandBuffers[bufferIdx];
                 submitInfo.signalSemaphoreCount = static_cast<uint32_t>(renderJob.signalSemaphores.size());
                 submitInfo.pSignalSemaphores = renderJob.signalSemaphores.data();
 
@@ -99,11 +121,17 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                     hostWait->signaled = false;
                 }
 
-                result = vkQueueSubmit(queue, 1, &submitInfo, renderJob.fence);
+                result = vkQueueSubmit(queue, 1, &submitInfo, fences[bufferIdx]);
                 if (result != VK_SUCCESS)
                 {
                     std::cout << "Failed to submit draw command buffer" << std::endl;
                     std::terminate();
+                }
+
+                // Signal the main thread if needed
+                if (renderJob.fence != VK_NULL_HANDLE)
+                {
+                    vkQueueSubmit(queue, 0, nullptr, renderJob.fence);
                 }
 
                 // Tell other threads that the command buffer which signals the Vulkan sempahore has been submitted
@@ -117,6 +145,10 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                 }
             }
             vkDestroyCommandPool(device, commandPool, nullptr);
+            for (auto& fence : fences)
+            {
+                vkDestroyFence(device, fence, nullptr);
+            }
         });
     }
 }

@@ -26,7 +26,6 @@ public:
 		std::vector<HostSemaphore*> hostSignals;
 		std::vector<HostSemaphore*> hostWaits;
 		VkFence fence{ VK_NULL_HANDLE };
-		uint32_t bufferIdx{ 0 };
 	};
 
 	RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, size_t threadCount);
@@ -35,6 +34,8 @@ public:
 
 	void addJob(RenderJob job);
 private:
+	static constexpr uint32_t COMMAND_BUFFER_COUNT = 5;
+
 	std::vector<std::thread> m_renderThreads;
 	std::queue<RenderJob> m_renderJobs;
 
