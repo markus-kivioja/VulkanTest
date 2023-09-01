@@ -59,13 +59,13 @@ void RenderPass::begin(VkCommandBuffer commandBuffer, uint32_t bufferIdx)
     {
         VkClearValue colorValue;
         colorValue.color = { {0.0f, 0.0f, 0.0f, 1.0f} };
-        clearValues.push_back(colorValue);
+        clearValues.emplace_back(colorValue);
     }
     if (m_hasDepthAttachment)
     {
         VkClearValue depthValue;
         depthValue.depthStencil = { 1.0f, 0 };
-        clearValues.push_back(depthValue);
+        clearValues.emplace_back(depthValue);
     }
     renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassBeginInfo.pClearValues = clearValues.data();

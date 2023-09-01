@@ -63,7 +63,7 @@ ImguiPass::ImguiPass(InitInfo initInfo, VkDevice device, std::vector<Texture*>& 
 
         VkFramebuffer framebuffer;
         result = vkCreateFramebuffer(m_vkDevice, &framebufferInfo, nullptr, &framebuffer);
-        m_framebuffers.push_back(framebuffer);
+        m_framebuffers.emplace_back(framebuffer);
         if (result != VK_SUCCESS)
         {
             std::cout << "Failed to create framebuffer" << std::endl;

@@ -7,19 +7,34 @@
 
 #include <iostream>
 
-Texture::Texture(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, std::string const& filename) :
+Texture::Texture(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, std::vector<std::string> const& filenames) :
 	m_vkDevice(device)
 {
 	int width{ 0 };
 	int height{ 0 }; 
 	int texChannels{ 0 };
-	stbi_uc* data = stbi_load(filename.c_str(), &width, &height, &texChannels, STBI_rgb_alpha);
-	VkDeviceSize size = static_cast<VkDeviceSize>(width) * height * 4;
-	if (!data)
+	VkDeviceSize size{ 0 };
+
+	struct ImageData
 	{
-		std::cout << "Failed to load image " << filename << std::endl;
-		std::terminate();
+		stbi_uc* data;
+		size_t size;
+	};
+	std::vector<ImageData> imageDatas;
+	imageDatas.reserve(filenames.size());
+	for (auto& filename : filenames)
+	{
+		stbi_uc* data = stbi_load(filename.c_str(), &width, &height, &texChannels, STBI_rgb_alpha);
+		if (!data)
+		{
+			std::cout << "Failed to load image " << filename << std::endl;
+			std::terminate();
+		}
+		ImageData imageData{ data, static_cast<size_t>(width) * height * 4 };
+		imageDatas.emplace_back(imageData);
+		size += static_cast<VkDeviceSize>(imageData.size);
 	}
+	m_layerCount = static_cast<uint32_t>(imageDatas.size());
 
 	// The staging buffer
 	VkBufferCreateInfo stagingBufferInfo{};
@@ -58,9 +73,14 @@ Texture::Texture(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuff
 	vkBindBufferMemory(m_vkDevice, m_stagingBuffer, m_stagingMemory, 0);
 	void* mappedData{ nullptr };
 	vkMapMemory(m_vkDevice, m_stagingMemory, 0, stagingBufferInfo.size, 0, &mappedData);
-	memcpy(mappedData, data, static_cast<size_t>(size));
+	size_t offset{ 0 };
+	for (auto& imageData : imageDatas)
+	{
+		memcpy(static_cast<uint8_t*>(mappedData) + offset, imageData.data, imageData.size);
+		offset += imageData.size;
+		stbi_image_free(imageData.data);
+	}
 	vkUnmapMemory(m_vkDevice, m_stagingMemory);
-	stbi_image_free(data);
 
 	// The image
 	VkImageCreateInfo imageCreateInfo{};
@@ -70,13 +90,14 @@ Texture::Texture(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuff
 	imageCreateInfo.extent.height = height;
 	imageCreateInfo.extent.depth = 1;
 	imageCreateInfo.mipLevels = 1;
-	imageCreateInfo.arrayLayers = 1;
+	imageCreateInfo.arrayLayers = m_layerCount;
 	imageCreateInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
 	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 	imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageCreateInfo.flags = m_layerCount == CUBE_LAYER_COUNT ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 	result = vkCreateImage(m_vkDevice, &imageCreateInfo, nullptr, &m_image);
 	if (result != VK_SUCCESS)
 	{
@@ -115,7 +136,7 @@ Texture::Texture(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuff
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.imageSubresource.mipLevel = 0;
 	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = 1;
+	region.imageSubresource.layerCount = m_layerCount;
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
 	vkCmdCopyBufferToImage(copyCommandBuffer, m_stagingBuffer, m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
@@ -124,13 +145,13 @@ Texture::Texture(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuff
 	VkImageViewCreateInfo viewInfo{};
 	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	viewInfo.image = m_image;
-	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.viewType = m_layerCount == CUBE_LAYER_COUNT ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
 	viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
 	viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	viewInfo.subresourceRange.baseMipLevel = 0;
 	viewInfo.subresourceRange.levelCount = 1;
 	viewInfo.subresourceRange.baseArrayLayer = 0;
-	viewInfo.subresourceRange.layerCount = 1;
+	viewInfo.subresourceRange.layerCount = m_layerCount;
 	result = vkCreateImageView(m_vkDevice, &viewInfo, nullptr, &m_imageView);
 	if (result != VK_SUCCESS)
 	{
@@ -321,7 +342,7 @@ void Texture::addBarrier(VkCommandBuffer commandBuffer, VkImageLayout prevLayout
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
+	barrier.subresourceRange.layerCount = m_layerCount;
 	VkPipelineStageFlags srcStageMask;
 	VkPipelineStageFlags dstStageMask;
 	if (prevLayout == VK_IMAGE_LAYOUT_UNDEFINED && nextLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {

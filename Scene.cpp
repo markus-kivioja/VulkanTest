@@ -84,9 +84,9 @@ Scene::Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice d
     
     for (int i = 0; i < MICKEY_COUNT; ++i)
     {
-        m_objects.push_back(std::make_unique<Mickey>(i, physicalDevice, device, copyCommandBuffer, modelDescSetAllocInfo));
+        m_objects.emplace_back(std::make_unique<Mickey>(i, physicalDevice, device, copyCommandBuffer, modelDescSetAllocInfo));
     }
-    m_objects.push_back(std::make_unique<Floor>(OBJECT_COUNT, physicalDevice, device, copyCommandBuffer, modelDescSetAllocInfo));
+    m_objects.emplace_back(std::make_unique<Floor>(OBJECT_COUNT, physicalDevice, device, copyCommandBuffer, modelDescSetAllocInfo));
 
     ImGui_ImplVulkan_CreateFontsTexture(copyCommandBuffer);
 

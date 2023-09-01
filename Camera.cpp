@@ -42,7 +42,7 @@ Camera::Camera(Type type, VkPhysicalDevice physicalDevice, VkDevice device, VkDe
 
     for (uint32_t i = 0; i < Renderer::BUFFER_COUNT; ++i)
     {
-        m_uniformBuffers.push_back(std::make_unique<Buffer>(physicalDevice, device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(GBufferPass::CameraTransforms)));
+        m_uniformBuffers.emplace_back(std::make_unique<Buffer>(physicalDevice, device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(GBufferPass::CameraTransforms)));
         VkDescriptorBufferInfo uniformBufferInfo{};
         uniformBufferInfo.buffer = m_uniformBuffers[i]->m_vkBuffer;
         uniformBufferInfo.offset = 0;

@@ -34,7 +34,7 @@ void SceneObject::init()
     }
     for (uint32_t i = 0; i < Renderer::BUFFER_COUNT; ++i)
     {
-        m_uniformBuffers.push_back(std::make_unique<Buffer>(m_physicalDevice, m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(GBufferPass::ModelTransforms)));
+        m_uniformBuffers.emplace_back(std::make_unique<Buffer>(m_physicalDevice, m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(GBufferPass::ModelTransforms)));
         VkDescriptorBufferInfo uniformBufferInfo{};
         uniformBufferInfo.buffer = m_uniformBuffers[i]->m_vkBuffer;
         uniformBufferInfo.offset = 0;
@@ -103,7 +103,7 @@ uint16_t SceneObject::addVertex(uint32_t hash, GBufferPass::Vertex* pVertex)
     if (!bFoundInList)
     {
         index = static_cast<uint16_t>(m_vertices.size());
-        m_vertices.push_back(*pVertex);
+        m_vertices.emplace_back(*pVertex);
 
         VertexCacheEntry* pNewEntry = new VertexCacheEntry;
         if (pNewEntry == NULL)
@@ -114,7 +114,7 @@ uint16_t SceneObject::addVertex(uint32_t hash, GBufferPass::Vertex* pVertex)
 
         while ((uint32_t)m_vertexCache.size() <= hash)
         {
-            m_vertexCache.push_back(nullptr);
+            m_vertexCache.emplace_back(nullptr);
         }
 
         VertexCacheEntry* pCurEntry = m_vertexCache[hash];
@@ -181,15 +181,15 @@ void SceneObject::loadIndexedMesh(std::string const& filename)
 		{
 		case POSITION:
 			fin >> x >> y >> z;
-			positions.push_back(glm::vec3(x, y, z));
+			positions.emplace_back(glm::vec3(x, y, z));
 			break;
 		case TEXCOORD:
 			fin >> x >> y;
-			texCoords.push_back(glm::vec2(x, y));
+			texCoords.emplace_back(glm::vec2(x, y));
 			break;
 		case NORMAL:
 			fin >> x >> y >> z;
-			normals.push_back(glm::vec3(x, y, z));
+			normals.emplace_back(glm::vec3(x, y, z));
 			break;
 		case FACE:
 			for (int i = 0; i < indicesPerFace; ++i)
@@ -204,14 +204,14 @@ void SceneObject::loadIndexedMesh(std::string const& filename)
 				vertex.normal = normals[normalIndex - 1];
 
 				index = addVertex(posIndex, &vertex);
-				m_indices.push_back(index);
+				m_indices.emplace_back(index);
 
 				if (i < 3)
 					triangle.indices[i] = index;
 				else
 					triangle.indices[1] = index;
 			}
-			triangles.push_back(triangle);
+			triangles.emplace_back(triangle);
 			break;
 		}
 

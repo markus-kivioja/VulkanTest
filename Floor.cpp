@@ -18,7 +18,7 @@ Floor::Floor(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, VkCo
     m_indices = {
         0, 1, 2, 2, 3, 0
     };
-    m_albedoMap = std::make_unique<Texture>(physicalDevice, device, copyCommandBuffer, ALBEDO_FILENAME);
+    m_albedoMap = std::make_unique<Texture>(physicalDevice, device, copyCommandBuffer, std::vector{ ALBEDO_FILENAME });
     SceneObject::SceneObject::init();
 }
 

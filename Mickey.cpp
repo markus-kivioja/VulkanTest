@@ -10,7 +10,7 @@ Mickey::Mickey(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, Vk
 	SceneObject::SceneObject(id, physicalDevice, device, copyCommandBuffer, descSetAllocInfo)
 {
 	loadIndexedMesh(MESH_FILENAME);
-    m_albedoMap = std::make_unique<Texture>(physicalDevice, device, copyCommandBuffer, ALBEDO_FILENAME);
+    m_albedoMap = std::make_unique<Texture>(physicalDevice, device, copyCommandBuffer, std::vector{ ALBEDO_FILENAME });
     SceneObject::SceneObject::init();
 }
 

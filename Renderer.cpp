@@ -38,13 +38,13 @@ Renderer::Renderer()
     vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapChain, &imageCount, swapChainImages.data());
     for (auto const& image : swapChainImages)
     {
-        m_frameBuffers.push_back(std::make_unique<Texture>(m_vkDevice, WINDOW_WIDTH, WINDOW_HEIGHT, VK_FORMAT_B8G8R8A8_SRGB, image));
+        m_frameBuffers.emplace_back(std::make_unique<Texture>(m_vkDevice, WINDOW_WIDTH, WINDOW_HEIGHT, VK_FORMAT_B8G8R8A8_SRGB, image));
     }
 
     m_renderPasses.resize(RenderPassId::COUNT);
 
     std::vector<Texture*> skyTargets{ m_gBufferAlbedo.get() };
-    m_renderPasses[RenderPassId::SKY] = std::make_unique<SkyPass>(m_vkPhysicalDevice, m_vkDevice, skyTargets);
+    m_renderPasses[RenderPassId::SKY] = std::make_unique<SkyPass>(m_vkPhysicalDevice, m_vkDevice, skyTargets, m_presentQueue, m_queueFamilyIdx);
 
     std::vector<Texture*> gBufferColorTargets{m_gBufferAlbedo.get(), m_gBufferNormal.get()};
     m_renderPasses[RenderPassId::GBUFFER] = std::make_unique<GBufferPass>(m_vkDevice, gBufferColorTargets, m_depthBuffer.get());
@@ -55,7 +55,7 @@ Renderer::Renderer()
     std::vector<Texture*> onScreenColorTargets;
     for (auto& framebuffer : m_frameBuffers)
     {
-        onScreenColorTargets.push_back(framebuffer.get());
+        onScreenColorTargets.emplace_back(framebuffer.get());
     }
     std::vector<Texture*> lightingSrcTextures{ m_gBufferAlbedo.get(), m_gBufferNormal.get(), m_depthBuffer.get(), m_shadowMap.get() };
     m_renderPasses[RenderPassId::LIGHTING] = std::make_unique<LightingPass>(m_vkPhysicalDevice, m_vkDevice, onScreenColorTargets, lightingSrcTextures);
@@ -73,7 +73,7 @@ Renderer::Renderer()
 
     m_renderThreadPool = std::make_unique<RenderThreadPool>(m_vkDevice, m_queueFamilyIdx, m_threadCount);
 
-    // Create the render jobs
+    // Set the render job dependencies
     for (uint32_t bufferIdx = 0; bufferIdx < BUFFER_COUNT; ++bufferIdx)
     {
         m_gBufferJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_gBufferPassFinished[bufferIdx] };
