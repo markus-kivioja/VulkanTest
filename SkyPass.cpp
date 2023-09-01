@@ -1,6 +1,8 @@
 #include "SkyPass.h"
 
 #include "Renderer.h"
+#include "Camera.h"
+#include "Scene.h"
 
 SkyPass::SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& colorTargets, VkQueue queue, uint32_t queueFamilyIdx) :
 	RenderPass::RenderPass(device, 1)
@@ -94,14 +96,22 @@ SkyPass::SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<T
 
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Vertex);
+    bindingDescription.stride = sizeof(GBufferPass::Vertex);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
+    std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(Vertex, position);
+    attributeDescriptions[0].offset = offsetof(GBufferPass::Vertex, position);
+    attributeDescriptions[1].binding = 0;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[1].offset = offsetof(GBufferPass::Vertex, normal);
+    attributeDescriptions[2].binding = 0;
+    attributeDescriptions[2].location = 2;
+    attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[2].offset = offsetof(GBufferPass::Vertex, uvCoord);
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -126,7 +136,7 @@ SkyPass::SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<T
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.cullMode = VK_CULL_MODE_NONE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -340,5 +350,9 @@ SkyPass::~SkyPass()
 
 void SkyPass::render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
 {
+    begin(commandBuffer);
+    scene->m_cameras[Camera::Type::NORMAL]->bind(commandBuffer, m_pipelineLayout, bufferIdx, dt);
+    m_environmentCube->update(bufferIdx, dt);
 	m_environmentCube->render(commandBuffer, m_pipelineLayout, bufferIdx, dt);
+    end(commandBuffer);
 }

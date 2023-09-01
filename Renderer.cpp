@@ -407,6 +407,11 @@ void Renderer::render()
         float dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - prevTime).count();
         prevTime = currentTime;
 
+        m_skyJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
+        {
+            m_renderPasses[SKY]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
+        };
+
         m_gBufferJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
         {
             m_renderPasses[GBUFFER]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
@@ -430,6 +435,7 @@ void Renderer::render()
         };
         
         // Give the rendering jobs to the thread pool
+        m_renderThreadPool->addJob(&m_skyJobs[m_bufferIdx]);
         m_renderThreadPool->addJob(&m_gBufferJobs[m_bufferIdx]);
         m_renderThreadPool->addJob(&m_shadowMapJobs[m_bufferIdx]);
         m_renderThreadPool->addJob(&m_lightingJobs[m_bufferIdx]);

@@ -46,6 +46,7 @@ private:
 	VkSurfaceKHR m_vkSurface{ VK_NULL_HANDLE };
 	VkSwapchainKHR m_vkSwapChain{ VK_NULL_HANDLE };
 
+	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_skyJobs;
 	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_gBufferJobs;
 	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_shadowMapJobs;
 	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_lightingJobs;

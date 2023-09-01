@@ -12,6 +12,8 @@ layout(set = 1, binding = 0) uniform CameraTransforms
 } cameraTransform;
 
 layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 uvCoord;
 
 layout(location = 0) out vec3 fragTexCoord;
 

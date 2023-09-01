@@ -17,10 +17,6 @@ public:
 
 	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
 private:
-	struct Vertex {
-		glm::vec3 position;
-	};
-
 	VkDescriptorPool m_descriptorPool{ VK_NULL_HANDLE };
 
 	std::unique_ptr<EnvironmentCube> m_environmentCube{ nullptr };

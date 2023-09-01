@@ -15,7 +15,7 @@ GBufferPass::GBufferPass(VkDevice device, std::vector<Texture*>& colorTargets, T
     attachmentDescriptions[0].flags = 0;
     attachmentDescriptions[0].format = colorTargets[0]->m_format;
     attachmentDescriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;

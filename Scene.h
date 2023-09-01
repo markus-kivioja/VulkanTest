@@ -13,6 +13,7 @@
 
 struct GLFWwindow;
 
+class SkyPass;
 class LightingPass;
 
 class Scene
@@ -26,6 +27,7 @@ public:
 
 	void keyPressed(GLFWwindow* window, int key, int scancode, int action, int mods);
 private:
+	friend SkyPass;
 	friend LightingPass;
 
 	VkDescriptorPool m_descriptorPool{ VK_NULL_HANDLE };
