@@ -24,7 +24,15 @@ layout(location = 0) out vec4 outColor;
 
 void main()
 {
-	vec4 ndc = vec4(uvCoord * 2.0f - 1.0f, texture(depthSampler, uvCoord).r, 1);
+	float depth = texture(depthSampler, uvCoord).r;
+	vec4 albedo = texture(albedoSampler, uvCoord);
+	if (depth == 1.0) // Sky
+	{
+		outColor = albedo;
+		return;
+	}
+
+	vec4 ndc = vec4(uvCoord * 2.0f - 1.0f, depth, 1);
 	vec4 temp = transforms.projInverse * ndc;
 	temp /= temp.w;
 	vec3 viewSpacePos = temp.xyz;
@@ -56,5 +64,5 @@ void main()
 		specular = pow(max(dot(N, H), 0.0), SHININESS);
 	}
 
-    outColor = texture(albedoSampler, uvCoord) * (AMBIENT + diffuse * shadow) + specular;
+    outColor = albedo * (AMBIENT + diffuse * shadow) + specular;
 }

@@ -23,7 +23,7 @@ public:
 		std::function<void(VkCommandBuffer)> job;
 		std::vector<VkSemaphore> signalSemaphores;
 		std::vector<VkSemaphore> waitSemaphores;
-		std::vector<HostSemaphore*> hostSignals;
+		HostSemaphore hostSignal;
 		std::vector<HostSemaphore*> hostWaits;
 		VkFence fence{ VK_NULL_HANDLE };
 	};

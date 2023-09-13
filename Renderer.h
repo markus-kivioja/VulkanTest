@@ -53,16 +53,12 @@ private:
 	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_imguiJobs;
 
 	std::array<VkSemaphore, BUFFER_COUNT> m_frameBufferAvailable{ VK_NULL_HANDLE };
+	std::array<VkSemaphore, BUFFER_COUNT> m_skyPassFinished{ VK_NULL_HANDLE };
 	std::array<VkSemaphore, BUFFER_COUNT> m_gBufferPassFinished{ VK_NULL_HANDLE };
 	std::array<VkSemaphore, BUFFER_COUNT> m_shadowPassFinished{ VK_NULL_HANDLE };
 	std::array<VkSemaphore, BUFFER_COUNT> m_lightingPassFinished{ VK_NULL_HANDLE };
 	std::array<VkSemaphore, BUFFER_COUNT> m_imguiPassFinished{ VK_NULL_HANDLE };
 	std::array<VkFence, BUFFER_COUNT> m_vkFences{ VK_NULL_HANDLE };
-
-	RenderThreadPool::HostSemaphore m_gBufferPassSubmitted;
-	RenderThreadPool::HostSemaphore m_shadowPassSubmitted;
-	RenderThreadPool::HostSemaphore m_lightingPassSubmitted;
-	RenderThreadPool::HostSemaphore m_imguiPassSubmitted;
 
 	std::unique_ptr<Texture> m_gBufferAlbedo;
 	std::unique_ptr<Texture> m_gBufferNormal;

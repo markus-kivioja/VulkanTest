@@ -135,14 +135,11 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                 }
 
                 // Tell other threads that the command buffer which signals the Vulkan sempahore has been submitted
-                for (auto& hostSignal : renderJob->hostSignals)
                 {
-                    {
-                        std::unique_lock lock(hostSignal->mutex);
-                        hostSignal->signaled = true;
-                    }
-                    hostSignal->cv.notify_all();
+                    std::unique_lock lock(renderJob->hostSignal.mutex);
+                    renderJob->hostSignal.signaled = true;
                 }
+                renderJob->hostSignal.cv.notify_all();
             }
             vkDestroyCommandPool(device, commandPool, nullptr);
             for (auto& fence : fences)

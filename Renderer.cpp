@@ -76,28 +76,26 @@ Renderer::Renderer()
     // Set the render job dependencies
     for (uint32_t bufferIdx = 0; bufferIdx < BUFFER_COUNT; ++bufferIdx)
     {
+        m_skyJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_skyPassFinished[bufferIdx] };
+
+        m_gBufferJobs[bufferIdx].waitSemaphores = std::vector<VkSemaphore>{ m_skyPassFinished[bufferIdx] };
+        m_gBufferJobs[bufferIdx].hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_skyJobs[bufferIdx].hostSignal };
         m_gBufferJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_gBufferPassFinished[bufferIdx] };
-        m_gBufferJobs[bufferIdx].hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_gBufferPassSubmitted };
 
         m_shadowMapJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_shadowPassFinished[bufferIdx] };
-        m_shadowMapJobs[bufferIdx].hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_shadowPassSubmitted };
 
         m_lightingJobs[bufferIdx].waitSemaphores = std::vector<VkSemaphore>{
             m_gBufferPassFinished[bufferIdx],
             m_shadowPassFinished[bufferIdx],
             m_frameBufferAvailable[bufferIdx]
         };
-        m_lightingJobs[bufferIdx].hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_gBufferPassSubmitted, &m_shadowPassSubmitted };
+        m_lightingJobs[bufferIdx].hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_gBufferJobs[bufferIdx].hostSignal, &m_shadowMapJobs[bufferIdx].hostSignal };
         m_lightingJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_lightingPassFinished[bufferIdx] };
-        m_lightingJobs[bufferIdx].hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_lightingPassSubmitted };
 
         m_imguiJobs[bufferIdx].fence = m_vkFences[bufferIdx];
-        m_imguiJobs[bufferIdx].waitSemaphores = std::vector<VkSemaphore>{
-            m_lightingPassFinished[bufferIdx]
-        };
-        m_imguiJobs[bufferIdx].hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_lightingPassSubmitted };
+        m_imguiJobs[bufferIdx].waitSemaphores = std::vector<VkSemaphore>{ m_lightingPassFinished[bufferIdx] };
+        m_imguiJobs[bufferIdx].hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_lightingJobs[bufferIdx].hostSignal };
         m_imguiJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_imguiPassFinished[bufferIdx] };
-        m_imguiJobs[bufferIdx].hostSignals = std::vector<RenderThreadPool::HostSemaphore*>{ &m_imguiPassSubmitted };
     }
 }
 
@@ -253,12 +251,21 @@ void Renderer::initVulkan()
             std::terminate();
         }
     }
+    for (auto& semaphore : m_skyPassFinished)
+    {
+        result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
+        if (result != VK_SUCCESS)
+        {
+            std::cout << "Failed to create \"sky pass finished\" semaphore" << std::endl;
+            std::terminate();
+        }
+    }
     for (auto& semaphore : m_gBufferPassFinished)
     {
         result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
         if (result != VK_SUCCESS)
         {
-            std::cout << "Failed to create \"G-buffer finished\" semaphore" << std::endl;
+            std::cout << "Failed to create \"G-buffer pass finished\" semaphore" << std::endl;
             std::terminate();
         }
     }
@@ -318,6 +325,7 @@ Renderer::~Renderer()
     for (uint32_t i = 0; i < BUFFER_COUNT; ++i)
     {
         vkDestroySemaphore(m_vkDevice, m_frameBufferAvailable[i], nullptr);
+        vkDestroySemaphore(m_vkDevice, m_skyPassFinished[i], nullptr);
         vkDestroySemaphore(m_vkDevice, m_gBufferPassFinished[i], nullptr);
         vkDestroySemaphore(m_vkDevice, m_shadowPassFinished[i], nullptr);
         vkDestroySemaphore(m_vkDevice, m_lightingPassFinished[i], nullptr);
@@ -375,12 +383,12 @@ void Renderer::endFrame()
     presentInfo.pImageIndices = &m_frameBufferIdx;
 
     {
-        std::unique_lock lock(m_imguiPassSubmitted.mutex);
-        m_imguiPassSubmitted.cv.wait(lock, [this]()
+        std::unique_lock lock(m_imguiJobs[m_bufferIdx].hostSignal.mutex);
+        m_imguiJobs[m_bufferIdx].hostSignal.cv.wait(lock, [this]()
             {
-                return m_imguiPassSubmitted.signaled;
+                return m_imguiJobs[m_bufferIdx].hostSignal.signaled;
             });
-        m_imguiPassSubmitted.signaled = false;
+        m_imguiJobs[m_bufferIdx].hostSignal.signaled = false;
     }
 
     vkQueuePresentKHR(m_presentQueue, &presentInfo);
