@@ -46,18 +46,7 @@ private:
 	VkSurfaceKHR m_vkSurface{ VK_NULL_HANDLE };
 	VkSwapchainKHR m_vkSwapChain{ VK_NULL_HANDLE };
 
-	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_skyJobs;
-	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_gBufferJobs;
-	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_shadowMapJobs;
-	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_lightingJobs;
-	std::array<RenderThreadPool::RenderJob, BUFFER_COUNT> m_imguiJobs;
-
 	std::array<VkSemaphore, BUFFER_COUNT> m_frameBufferAvailable{ VK_NULL_HANDLE };
-	std::array<VkSemaphore, BUFFER_COUNT> m_skyPassFinished{ VK_NULL_HANDLE };
-	std::array<VkSemaphore, BUFFER_COUNT> m_gBufferPassFinished{ VK_NULL_HANDLE };
-	std::array<VkSemaphore, BUFFER_COUNT> m_shadowPassFinished{ VK_NULL_HANDLE };
-	std::array<VkSemaphore, BUFFER_COUNT> m_lightingPassFinished{ VK_NULL_HANDLE };
-	std::array<VkSemaphore, BUFFER_COUNT> m_imguiPassFinished{ VK_NULL_HANDLE };
 	std::array<VkFence, BUFFER_COUNT> m_vkFences{ VK_NULL_HANDLE };
 
 	std::unique_ptr<Texture> m_gBufferAlbedo;
@@ -87,5 +76,7 @@ private:
 
 	uint32_t m_threadCount{ 0 };
 	std::unique_ptr<RenderThreadPool> m_renderThreadPool;
+
+	float m_dt{ 0 };
 };
 

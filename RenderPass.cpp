@@ -23,11 +23,60 @@ std::vector<char> RenderPass::readFile(std::string const& filename)
     return buffer;
 }
 
-RenderPass::RenderPass(VkDevice device, uint32_t colorTargetCount) :
+RenderPass::RenderPass(VkDevice device, RenderThreadPool* threadPool, uint32_t colorTargetCount) :
 	m_vkDevice(device)
+    , m_threadPool(threadPool)
     , m_colorTargetCount(colorTargetCount)
 {
+    VkSemaphoreCreateInfo semaphoreCreateInfo{};
+    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    for (uint32_t bufferIdx{ 0 }; bufferIdx < Renderer::BUFFER_COUNT; ++bufferIdx)
+    {
+        VkResult result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &m_renderJobs[bufferIdx].deviceSignal);
+        if (result != VK_SUCCESS)
+        {
+            std::cout << "Failed to create Vulkan semaphore" << std::endl;
+            std::terminate();
+        }
+    }
+}
 
+RenderPass::~RenderPass()
+{
+    if (m_modelSetLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyDescriptorSetLayout(m_vkDevice, m_modelSetLayout, nullptr);
+        m_modelSetLayout = VK_NULL_HANDLE;
+    }
+    if (m_cameraSetLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyDescriptorSetLayout(m_vkDevice, m_cameraSetLayout, nullptr);
+        m_cameraSetLayout = VK_NULL_HANDLE;
+    }
+    if (m_pipeline != VK_NULL_HANDLE)
+    {
+        vkDestroyPipeline(m_vkDevice, m_pipeline, nullptr);
+        m_pipeline = VK_NULL_HANDLE;
+    }
+    if (m_pipelineLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyPipelineLayout(m_vkDevice, m_pipelineLayout, nullptr);
+        m_pipelineLayout = VK_NULL_HANDLE;
+    }
+    if (m_vkRenderPass != VK_NULL_HANDLE)
+    {
+        vkDestroyRenderPass(m_vkDevice, m_vkRenderPass, nullptr);
+        m_vkRenderPass = VK_NULL_HANDLE;
+    }
+    for (auto& framebuffer : m_framebuffers)
+    {
+        vkDestroyFramebuffer(m_vkDevice, framebuffer, nullptr);
+        framebuffer = VK_NULL_HANDLE;
+    }
+    for (uint32_t i = 0; i < Renderer::BUFFER_COUNT; ++i)
+    {
+        vkDestroySemaphore(m_vkDevice, m_renderJobs[i].deviceSignal, nullptr);
+    }
 }
 
 VkShaderModule RenderPass::createVkShader(std::vector<char> const& code)
@@ -46,12 +95,12 @@ VkShaderModule RenderPass::createVkShader(std::vector<char> const& code)
     return shader;
 }
 
-void RenderPass::begin(VkCommandBuffer commandBuffer, uint32_t bufferIdx)
+void RenderPass::begin(VkCommandBuffer commandBuffer, uint32_t frameBufferIdx)
 {
     VkRenderPassBeginInfo renderPassBeginInfo{};
     renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassBeginInfo.renderPass = m_vkRenderPass;
-    renderPassBeginInfo.framebuffer = m_framebuffers[bufferIdx];
+    renderPassBeginInfo.framebuffer = m_framebuffers[frameBufferIdx];
     renderPassBeginInfo.renderArea.offset = { 0, 0 };
     renderPassBeginInfo.renderArea.extent = { m_targetWidth, m_targetHeight };
     std::vector<VkClearValue> clearValues;
@@ -97,36 +146,38 @@ void RenderPass::end(VkCommandBuffer commandBuffer)
     vkCmdEndRenderPass(commandBuffer);
 }
 
-RenderPass::~RenderPass()
+void RenderPass::render(Scene* scene, uint32_t frameBufferIdx, uint32_t bufferIdx, float dt)
 {
-    if (m_modelSetLayout != VK_NULL_HANDLE)
+    m_renderJobs[bufferIdx].job = [this, dt, scene, frameBufferIdx, bufferIdx](VkCommandBuffer commandBuffer)
     {
-        vkDestroyDescriptorSetLayout(m_vkDevice, m_modelSetLayout, nullptr);
-        m_modelSetLayout = VK_NULL_HANDLE;
+        m_frameBufferIdx = frameBufferIdx;
+        renderImpl(scene, commandBuffer, bufferIdx, dt);
+    };
+
+    m_threadPool->addJob(&m_renderJobs[bufferIdx]);
+}
+
+void RenderPass::dependsOn(RenderPass* renderPass)
+{
+    for (uint32_t bufferIdx{ 0 }; bufferIdx < Renderer::BUFFER_COUNT; ++bufferIdx)
+    {
+        m_renderJobs[bufferIdx].deviceWaits.push_back(renderPass->m_renderJobs[bufferIdx].deviceSignal);
+        m_renderJobs[bufferIdx].hostWaits.push_back(&renderPass->m_renderJobs[bufferIdx].hostSignal);
     }
-    if (m_cameraSetLayout != VK_NULL_HANDLE)
+}
+
+void RenderPass::dependsOn(const std::array<VkSemaphore, Renderer::BUFFER_COUNT>& semaphores)
+{
+    for (uint32_t bufferIdx{ 0 }; bufferIdx < Renderer::BUFFER_COUNT; ++bufferIdx)
     {
-        vkDestroyDescriptorSetLayout(m_vkDevice, m_cameraSetLayout, nullptr);
-        m_cameraSetLayout = VK_NULL_HANDLE;
+        m_renderJobs[bufferIdx].deviceWaits.push_back(semaphores[bufferIdx]);
     }
-    if (m_pipeline != VK_NULL_HANDLE)
+}
+
+void RenderPass::signalCPU(const std::array<VkFence, Renderer::BUFFER_COUNT>& fences)
+{
+    for (uint32_t bufferIdx{ 0 }; bufferIdx < Renderer::BUFFER_COUNT; ++bufferIdx)
     {
-        vkDestroyPipeline(m_vkDevice, m_pipeline, nullptr);
-        m_pipeline = VK_NULL_HANDLE;
-    }
-    if (m_pipelineLayout != VK_NULL_HANDLE)
-    {
-        vkDestroyPipelineLayout(m_vkDevice, m_pipelineLayout, nullptr);
-        m_pipelineLayout = VK_NULL_HANDLE;
-    }
-    if (m_vkRenderPass != VK_NULL_HANDLE)
-    {
-        vkDestroyRenderPass(m_vkDevice, m_vkRenderPass, nullptr);
-        m_vkRenderPass = VK_NULL_HANDLE;
-    }
-    for (auto& framebuffer : m_framebuffers)
-    {
-        vkDestroyFramebuffer(m_vkDevice, framebuffer, nullptr);
-        framebuffer = VK_NULL_HANDLE;
+        m_renderJobs[bufferIdx].fence = fences[bufferIdx];
     }
 }

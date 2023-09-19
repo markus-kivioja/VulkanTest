@@ -4,8 +4,8 @@
 #include "Camera.h"
 #include "Scene.h"
 
-SkyPass::SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& colorTargets, VkQueue queue, uint32_t queueFamilyIdx) :
-	RenderPass::RenderPass(device, 1)
+SkyPass::SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, RenderThreadPool* threadPool, std::vector<Texture*>& colorTargets, VkQueue queue, uint32_t queueFamilyIdx) :
+	RenderPass::RenderPass(device, threadPool, 1)
 {
     m_hasDepthAttachment = true;
 
@@ -348,7 +348,7 @@ SkyPass::~SkyPass()
     vkDestroyDescriptorPool(m_vkDevice, m_descriptorPool, nullptr);
 }
 
-void SkyPass::render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
+void SkyPass::renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
 {
     begin(commandBuffer);
     scene->m_cameras[Camera::Type::NORMAL]->bind(commandBuffer, m_pipelineLayout, bufferIdx, dt);

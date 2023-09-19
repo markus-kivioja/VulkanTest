@@ -13,10 +13,10 @@
 class LightingPass : public RenderPass
 {
 public:
-	LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& colorTargets, std::vector<Texture*>& srcTextures);
+	LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, RenderThreadPool* threadPool, std::vector<Texture*>& colorTargets, std::vector<Texture*>& srcTextures);
 	virtual ~LightingPass();
 
-	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
+	virtual void renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
 private:
 	struct Transforms {
 		glm::mat4 projInverse;

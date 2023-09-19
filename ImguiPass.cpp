@@ -6,8 +6,8 @@
 #include <iostream>
 #include <array>
 
-ImguiPass::ImguiPass(InitInfo initInfo, VkDevice device, std::vector<Texture*>& colorTargets) :
-    ImguiPass::RenderPass(device, 1)
+ImguiPass::ImguiPass(InitInfo initInfo, VkDevice device, RenderThreadPool* threadPool, std::vector<Texture*>& colorTargets) :
+    ImguiPass::RenderPass(device, threadPool, 1)
 {
     m_hasDepthAttachment = false;
 
@@ -117,7 +117,7 @@ ImguiPass::~ImguiPass()
     vkDestroyDescriptorPool(m_vkDevice, m_descPool, nullptr);
 }
 
-void ImguiPass::render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
+void ImguiPass::renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
 {
     begin(commandBuffer, m_frameBufferIdx);
 

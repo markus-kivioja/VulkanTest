@@ -7,8 +7,8 @@
 #include <iostream>
 #include <array>
 
-ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& depthTargets) :
-    RenderPass::RenderPass(device, 0)
+ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device, RenderThreadPool* threadPool, std::vector<Texture*>& depthTargets) :
+    RenderPass::RenderPass(device, threadPool, 0)
 {
     m_hasDepthAttachment = true;
 
@@ -252,7 +252,7 @@ ShadowPass::ShadowPass(VkPhysicalDevice physicalDevice, VkDevice device, std::ve
     vkDestroyShaderModule(device, vertexShader, nullptr);
 }
 
-void ShadowPass::render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
+void ShadowPass::renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
 {
     begin(commandBuffer);
     scene->render(commandBuffer, m_pipelineLayout, Camera::Type::LIGHT, bufferIdx, dt);

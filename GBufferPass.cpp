@@ -6,8 +6,8 @@
 #include <iostream>
 #include <array>
 
-GBufferPass::GBufferPass(VkDevice device, std::vector<Texture*>& colorTargets, Texture* depthTarget) :
-	RenderPass::RenderPass(device, 2)
+GBufferPass::GBufferPass(VkDevice device, RenderThreadPool* threadPool, std::vector<Texture*>& colorTargets, Texture* depthTarget) :
+	RenderPass::RenderPass(device, threadPool, 2)
 {
     m_hasDepthAttachment = true;
 
@@ -309,7 +309,7 @@ GBufferPass::~GBufferPass()
 
 }
 
-void GBufferPass::render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
+void GBufferPass::renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
 {
     begin(commandBuffer);
     scene->render(commandBuffer, m_pipelineLayout, Camera::Type::NORMAL, bufferIdx, dt);

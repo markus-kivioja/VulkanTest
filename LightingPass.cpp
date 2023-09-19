@@ -7,8 +7,8 @@
 #include <array>
 #include <iostream>
 
-LightingPass::LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& colorTargets, std::vector<Texture*>& srcTextures) :
-	RenderPass::RenderPass(device, 1)
+LightingPass::LightingPass(VkPhysicalDevice physicalDevice, VkDevice device, RenderThreadPool* threadPool, std::vector<Texture*>& colorTargets, std::vector<Texture*>& srcTextures) :
+	RenderPass::RenderPass(device, threadPool, 1)
 {
     m_hasDepthAttachment = false;
 
@@ -386,7 +386,7 @@ LightingPass::~LightingPass()
     vkDestroyDescriptorPool(m_vkDevice, m_descriptorPool, nullptr);
 }
 
-void LightingPass::render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
+void LightingPass::renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
 {
     begin(commandBuffer, m_frameBufferIdx);
 

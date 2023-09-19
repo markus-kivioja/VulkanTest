@@ -41,16 +41,18 @@ Renderer::Renderer()
         m_frameBuffers.emplace_back(std::make_unique<Texture>(m_vkDevice, WINDOW_WIDTH, WINDOW_HEIGHT, VK_FORMAT_B8G8R8A8_SRGB, image));
     }
 
+    m_renderThreadPool = std::make_unique<RenderThreadPool>(m_vkDevice, m_queueFamilyIdx, m_threadCount);
+
     m_renderPasses.resize(RenderPassId::COUNT);
 
     std::vector<Texture*> skyTargets{ m_gBufferAlbedo.get() };
-    m_renderPasses[RenderPassId::SKY] = std::make_unique<SkyPass>(m_vkPhysicalDevice, m_vkDevice, skyTargets, m_presentQueue, m_queueFamilyIdx);
+    m_renderPasses[RenderPassId::SKY] = std::make_unique<SkyPass>(m_vkPhysicalDevice, m_vkDevice, m_renderThreadPool.get(), skyTargets, m_presentQueue, m_queueFamilyIdx);
 
     std::vector<Texture*> gBufferColorTargets{m_gBufferAlbedo.get(), m_gBufferNormal.get()};
-    m_renderPasses[RenderPassId::GBUFFER] = std::make_unique<GBufferPass>(m_vkDevice, gBufferColorTargets, m_depthBuffer.get());
+    m_renderPasses[RenderPassId::GBUFFER] = std::make_unique<GBufferPass>(m_vkDevice, m_renderThreadPool.get(), gBufferColorTargets, m_depthBuffer.get());
 
     std::vector<Texture*> shadowPassDepthTargets{ m_shadowMap.get() };
-    m_renderPasses[RenderPassId::SHADOW] = std::make_unique<ShadowPass>(m_vkPhysicalDevice, m_vkDevice, shadowPassDepthTargets);
+    m_renderPasses[RenderPassId::SHADOW] = std::make_unique<ShadowPass>(m_vkPhysicalDevice, m_vkDevice, m_renderThreadPool.get(), shadowPassDepthTargets);
 
     std::vector<Texture*> onScreenColorTargets;
     for (auto& framebuffer : m_frameBuffers)
@@ -58,7 +60,7 @@ Renderer::Renderer()
         onScreenColorTargets.emplace_back(framebuffer.get());
     }
     std::vector<Texture*> lightingSrcTextures{ m_gBufferAlbedo.get(), m_gBufferNormal.get(), m_depthBuffer.get(), m_shadowMap.get() };
-    m_renderPasses[RenderPassId::LIGHTING] = std::make_unique<LightingPass>(m_vkPhysicalDevice, m_vkDevice, onScreenColorTargets, lightingSrcTextures);
+    m_renderPasses[RenderPassId::LIGHTING] = std::make_unique<LightingPass>(m_vkPhysicalDevice, m_vkDevice, m_renderThreadPool.get(), onScreenColorTargets, lightingSrcTextures);
 
     ImguiPass::InitInfo imguiInitInfo{};
     imguiInitInfo.instance = m_vkInstance;
@@ -67,36 +69,19 @@ Renderer::Renderer()
     imguiInitInfo.minImageCount = m_minImageCount;
     imguiInitInfo.imageCount = imageCount;
     imguiInitInfo.queue = m_presentQueue;
-    m_renderPasses[RenderPassId::IMGUI] = std::make_unique<ImguiPass>(imguiInitInfo, m_vkDevice, onScreenColorTargets);
+    m_renderPasses[RenderPassId::IMGUI] = std::make_unique<ImguiPass>(imguiInitInfo, m_vkDevice, m_renderThreadPool.get(), onScreenColorTargets);
 
     m_scene = std::make_unique<Scene>(m_renderPasses[RenderPassId::GBUFFER].get(), m_vkPhysicalDevice, m_vkDevice, m_presentQueue, m_queueFamilyIdx);
 
-    m_renderThreadPool = std::make_unique<RenderThreadPool>(m_vkDevice, m_queueFamilyIdx, m_threadCount);
-
     // Set the render job dependencies
-    for (uint32_t bufferIdx = 0; bufferIdx < BUFFER_COUNT; ++bufferIdx)
-    {
-        m_skyJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_skyPassFinished[bufferIdx] };
+    m_renderPasses[GBUFFER]->dependsOn(m_renderPasses[SKY].get());
+    
+    m_renderPasses[LIGHTING]->dependsOn(m_renderPasses[GBUFFER].get());
+    m_renderPasses[LIGHTING]->dependsOn(m_renderPasses[SHADOW].get());
+    m_renderPasses[LIGHTING]->dependsOn(m_frameBufferAvailable);
 
-        m_gBufferJobs[bufferIdx].waitSemaphores = std::vector<VkSemaphore>{ m_skyPassFinished[bufferIdx] };
-        m_gBufferJobs[bufferIdx].hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_skyJobs[bufferIdx].hostSignal };
-        m_gBufferJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_gBufferPassFinished[bufferIdx] };
-
-        m_shadowMapJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_shadowPassFinished[bufferIdx] };
-
-        m_lightingJobs[bufferIdx].waitSemaphores = std::vector<VkSemaphore>{
-            m_gBufferPassFinished[bufferIdx],
-            m_shadowPassFinished[bufferIdx],
-            m_frameBufferAvailable[bufferIdx]
-        };
-        m_lightingJobs[bufferIdx].hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_gBufferJobs[bufferIdx].hostSignal, &m_shadowMapJobs[bufferIdx].hostSignal };
-        m_lightingJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_lightingPassFinished[bufferIdx] };
-
-        m_imguiJobs[bufferIdx].fence = m_vkFences[bufferIdx];
-        m_imguiJobs[bufferIdx].waitSemaphores = std::vector<VkSemaphore>{ m_lightingPassFinished[bufferIdx] };
-        m_imguiJobs[bufferIdx].hostWaits = std::vector<RenderThreadPool::HostSemaphore*>{ &m_lightingJobs[bufferIdx].hostSignal };
-        m_imguiJobs[bufferIdx].signalSemaphores = std::vector<VkSemaphore>{ m_imguiPassFinished[bufferIdx] };
-    }
+    m_renderPasses[IMGUI]->dependsOn(m_renderPasses[LIGHTING].get());
+    m_renderPasses[IMGUI]->signalCPU(m_vkFences);
 }
 
 void Renderer::initVulkan()
@@ -251,51 +236,6 @@ void Renderer::initVulkan()
             std::terminate();
         }
     }
-    for (auto& semaphore : m_skyPassFinished)
-    {
-        result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
-        if (result != VK_SUCCESS)
-        {
-            std::cout << "Failed to create \"sky pass finished\" semaphore" << std::endl;
-            std::terminate();
-        }
-    }
-    for (auto& semaphore : m_gBufferPassFinished)
-    {
-        result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
-        if (result != VK_SUCCESS)
-        {
-            std::cout << "Failed to create \"G-buffer pass finished\" semaphore" << std::endl;
-            std::terminate();
-        }
-    }
-    for (auto& semaphore : m_shadowPassFinished)
-    {
-        result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
-        if (result != VK_SUCCESS)
-        {
-            std::cout << "Failed to create \"shadow pass finished\" semaphore" << std::endl;
-            std::terminate();
-        }
-    }
-    for (auto& semaphore : m_lightingPassFinished)
-    {
-        result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
-        if (result != VK_SUCCESS)
-        {
-            std::cout << "Failed to create \"lighting pass finished\" semaphore" << std::endl;
-            std::terminate();
-        }
-    }
-    for (auto& semaphore : m_imguiPassFinished)
-    {
-        result = vkCreateSemaphore(m_vkDevice, &semaphoreCreateInfo, nullptr, &semaphore);
-        if (result != VK_SUCCESS)
-        {
-            std::cout << "Failed to create \"imgui pass finished\" semaphore" << std::endl;
-            std::terminate();
-        }
-    }
 
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -325,11 +265,6 @@ Renderer::~Renderer()
     for (uint32_t i = 0; i < BUFFER_COUNT; ++i)
     {
         vkDestroySemaphore(m_vkDevice, m_frameBufferAvailable[i], nullptr);
-        vkDestroySemaphore(m_vkDevice, m_skyPassFinished[i], nullptr);
-        vkDestroySemaphore(m_vkDevice, m_gBufferPassFinished[i], nullptr);
-        vkDestroySemaphore(m_vkDevice, m_shadowPassFinished[i], nullptr);
-        vkDestroySemaphore(m_vkDevice, m_lightingPassFinished[i], nullptr);
-        vkDestroySemaphore(m_vkDevice, m_imguiPassFinished[i], nullptr);
         vkDestroyFence(m_vkDevice, m_vkFences[i], nullptr);
     }
 
@@ -365,6 +300,11 @@ void Renderer::beginFrame()
     vkResetFences(m_vkDevice, 1, &m_vkFences[m_bufferIdx]);
 
     vkAcquireNextImageKHR(m_vkDevice, m_vkSwapChain, UINT64_MAX, m_frameBufferAvailable[m_bufferIdx], VK_NULL_HANDLE, &m_frameBufferIdx);
+
+    static auto prevTime = std::chrono::high_resolution_clock::now();
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    m_dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - prevTime).count();
+    prevTime = currentTime;
 }
 
 void Renderer::endFrame()
@@ -372,7 +312,7 @@ void Renderer::endFrame()
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-    VkSemaphore waitSemaphores[] = { m_imguiPassFinished[m_bufferIdx] };
+    VkSemaphore waitSemaphores[] = { m_renderPasses[IMGUI]->m_renderJobs[m_bufferIdx].deviceSignal };
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = waitSemaphores;
 
@@ -383,12 +323,12 @@ void Renderer::endFrame()
     presentInfo.pImageIndices = &m_frameBufferIdx;
 
     {
-        std::unique_lock lock(m_imguiJobs[m_bufferIdx].hostSignal.mutex);
-        m_imguiJobs[m_bufferIdx].hostSignal.cv.wait(lock, [this]()
+        std::unique_lock lock(m_renderPasses[IMGUI]->m_renderJobs[m_bufferIdx].hostSignal.mutex);
+        m_renderPasses[IMGUI]->m_renderJobs[m_bufferIdx].hostSignal.cv.wait(lock, [this]()
             {
-                return m_imguiJobs[m_bufferIdx].hostSignal.signaled;
+                return m_renderPasses[IMGUI]->m_renderJobs[m_bufferIdx].hostSignal.signaled;
             });
-        m_imguiJobs[m_bufferIdx].hostSignal.signaled = false;
+        m_renderPasses[IMGUI]->m_renderJobs[m_bufferIdx].hostSignal.signaled = false;
     }
 
     vkQueuePresentKHR(m_presentQueue, &presentInfo);
@@ -410,44 +350,10 @@ void Renderer::render()
     {
         beginFrame();
 
-        static auto prevTime = std::chrono::high_resolution_clock::now();
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - prevTime).count();
-        prevTime = currentTime;
-
-        m_skyJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
+        for (auto& pass : m_renderPasses)
         {
-            m_renderPasses[SKY]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
-        };
-
-        m_gBufferJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
-        {
-            m_renderPasses[GBUFFER]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
-        };
-
-        m_shadowMapJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
-        {
-            m_renderPasses[SHADOW]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
-        };
-
-        m_lightingJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
-        {
-            m_renderPasses[LIGHTING]->setFrameBufferIdx(m_frameBufferIdx);
-            m_renderPasses[LIGHTING]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
-        };
-
-        m_imguiJobs[m_bufferIdx].job = [this, dt](VkCommandBuffer commandBuffer)
-        {
-            m_renderPasses[IMGUI]->setFrameBufferIdx(m_frameBufferIdx);
-            m_renderPasses[IMGUI]->render(m_scene.get(), commandBuffer, m_bufferIdx, dt);
-        };
-        
-        // Give the rendering jobs to the thread pool
-        m_renderThreadPool->addJob(&m_skyJobs[m_bufferIdx]);
-        m_renderThreadPool->addJob(&m_gBufferJobs[m_bufferIdx]);
-        m_renderThreadPool->addJob(&m_shadowMapJobs[m_bufferIdx]);
-        m_renderThreadPool->addJob(&m_lightingJobs[m_bufferIdx]);
-        m_renderThreadPool->addJob(&m_imguiJobs[m_bufferIdx]);
+            pass->render(m_scene.get(), m_frameBufferIdx, m_bufferIdx, m_dt);
+        }
 
         endFrame();
 

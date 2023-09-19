@@ -21,9 +21,9 @@ public:
 	struct RenderJob
 	{
 		std::function<void(VkCommandBuffer)> job;
-		std::vector<VkSemaphore> signalSemaphores;
-		std::vector<VkSemaphore> waitSemaphores;
+		VkSemaphore deviceSignal{ VK_NULL_HANDLE };
 		HostSemaphore hostSignal;
+		std::vector<VkSemaphore> deviceWaits;
 		std::vector<HostSemaphore*> hostWaits;
 		VkFence fence{ VK_NULL_HANDLE };
 	};

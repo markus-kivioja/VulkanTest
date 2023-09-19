@@ -18,9 +18,9 @@ public:
 		uint32_t imageCount{ 0 };
 		VkQueue queue{ VK_NULL_HANDLE };
 	};
-	ImguiPass(InitInfo initInfo, VkDevice device, std::vector<Texture*>& colorTargets);
+	ImguiPass(InitInfo initInfo, VkDevice device, RenderThreadPool* threadPool, std::vector<Texture*>& colorTargets);
 	virtual ~ImguiPass();
-	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
+	virtual void renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
 private:
 	VkDescriptorPool m_descPool{ VK_NULL_HANDLE };
 };

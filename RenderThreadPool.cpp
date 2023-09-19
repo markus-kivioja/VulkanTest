@@ -101,14 +101,14 @@ RenderThreadPool::RenderThreadPool(VkDevice device, uint32_t queueFamilyIdx, siz
                 }
                 VkSubmitInfo submitInfo{};
                 submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-                submitInfo.waitSemaphoreCount = static_cast<uint32_t>(renderJob->waitSemaphores.size());
-                submitInfo.pWaitSemaphores = renderJob->waitSemaphores.data();
-                std::vector<VkPipelineStageFlags> waitStages(renderJob->waitSemaphores.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+                submitInfo.waitSemaphoreCount = static_cast<uint32_t>(renderJob->deviceWaits.size());
+                submitInfo.pWaitSemaphores = renderJob->deviceWaits.data();
+                std::vector<VkPipelineStageFlags> waitStages(renderJob->deviceWaits.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
                 submitInfo.pWaitDstStageMask = waitStages.data();
                 submitInfo.commandBufferCount = 1;
                 submitInfo.pCommandBuffers = &commandBuffers[bufferIdx];
-                submitInfo.signalSemaphoreCount = static_cast<uint32_t>(renderJob->signalSemaphores.size());
-                submitInfo.pSignalSemaphores = renderJob->signalSemaphores.data();
+                submitInfo.signalSemaphoreCount = 1;
+                submitInfo.pSignalSemaphores = &renderJob->deviceSignal;
 
                 // Must wait for the command buffers that signal Vulkan semaphores to be submitted before submitting a waiting command buffer
                 for (auto& hostWait : renderJob->hostWaits)

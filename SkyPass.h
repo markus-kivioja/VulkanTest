@@ -12,10 +12,10 @@
 class SkyPass : public RenderPass
 {
 public:
-	SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, std::vector<Texture*>& colorTargets, VkQueue queue, uint32_t queueFamilyIdx);
+	SkyPass(VkPhysicalDevice physicalDevice, VkDevice device, RenderThreadPool* threadPool, std::vector<Texture*>& colorTargets, VkQueue queue, uint32_t queueFamilyIdx);
 	virtual ~SkyPass() override;
 
-	virtual void render(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
+	virtual void renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
 private:
 	VkDescriptorPool m_descriptorPool{ VK_NULL_HANDLE };
 
