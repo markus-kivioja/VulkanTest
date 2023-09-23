@@ -1,6 +1,7 @@
 #include "Scene.h"
 
 #include "Renderer.h"
+#include "InputHandler.h"
 #include "Mickey.h"
 #include "Floor.h"
 
@@ -113,6 +114,11 @@ void Scene::clean()
     vkDestroyDescriptorPool(m_vkDevice, m_descriptorPool, nullptr);
 }
 
+void Scene::update(InputHandler* inputHandler, uint32_t bufferIdx)
+{
+    m_cameras[Camera::Type::NORMAL]->turn(inputHandler->getDragVelocity(), bufferIdx);
+}
+
 void Scene::render(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, Camera::Type cameraType, uint32_t bufferIdx, float dt)
 {
     m_cameras[cameraType]->bind(commandBuffer, pipelineLayout, bufferIdx, dt);
@@ -128,28 +134,4 @@ void Scene::render(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayou
 	{
 		obj->render(commandBuffer, pipelineLayout, bufferIdx, dt);
 	}
-}
-
-void Scene::keyPressed(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    if (action == GLFW_PRESS)
-    {
-        switch (key)
-        {
-        case GLFW_KEY_W:
-            m_cameras[Camera::Type::NORMAL]->moveForward();
-            break;
-        case GLFW_KEY_S:
-            m_cameras[Camera::Type::NORMAL]->moveBackward();
-            break;
-        case GLFW_KEY_A:
-            m_cameras[Camera::Type::NORMAL]->moveLeft();
-            break;
-        case GLFW_KEY_D:
-            m_cameras[Camera::Type::NORMAL]->moveRight();
-            break;
-        default:
-            break;
-        }
-    }
 }

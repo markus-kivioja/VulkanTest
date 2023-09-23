@@ -27,6 +27,7 @@ public:
 
 	void bind(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t bufferIdx, float dt);
 
+	void turn(glm::vec2 velocity, uint32_t bufferIdx);
 	void moveForward() { std::cout << "Forward!" << std::endl; };
 	void moveBackward() { std::cout << "Backward!" << std::endl; };
 	void moveLeft() { std::cout << "Left!" << std::endl; };

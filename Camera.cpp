@@ -68,3 +68,14 @@ void Camera::bind(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout
 {
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &m_descriptorSets[bufferIdx], 0, nullptr);
 }
+
+void Camera::turn(glm::vec2 velocity, uint32_t bufferIdx)
+{
+    GBufferPass::CameraTransforms cameraTransforms{};
+    m_direction.x -= velocity.x * 0.01f;
+    m_direction.y += velocity.y * 0.01f;
+    m_view = glm::lookAt(m_position, m_position + m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+    cameraTransforms.view = m_view;
+    cameraTransforms.projection = m_projection;
+    m_uniformBuffers[bufferIdx]->update(&cameraTransforms, sizeof(GBufferPass::CameraTransforms));
+}

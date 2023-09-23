@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
 #include <vector>
@@ -15,6 +16,7 @@ struct GLFWwindow;
 
 class SkyPass;
 class LightingPass;
+class InputHandler;
 
 class Scene
 {
@@ -23,9 +25,9 @@ public:
 
 	void clean();
 
-	void render(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, Camera::Type cameraType, uint32_t bufferIdx, float dt);
+	void update(InputHandler* inputHandler, uint32_t bufferIdx);
 
-	void keyPressed(GLFWwindow* window, int key, int scancode, int action, int mods);
+	void render(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, Camera::Type cameraType, uint32_t bufferIdx, float dt);
 private:
 	friend SkyPass;
 	friend LightingPass;

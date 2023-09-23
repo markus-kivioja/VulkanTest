@@ -7,10 +7,17 @@
 #include "LightingPass.h"
 #include "ImguiPass.h"
 #include "RenderThreadPool.h"
+#include "InputHandler.h"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_vulkan.h"
+
+#define VK_USE_PLATFORM_WIN32_KHR
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
 
 #include <iostream>
 #include <array>
@@ -18,6 +25,8 @@
 Renderer::Renderer()
 {
     initVulkan();
+
+    m_inputHandler = std::make_unique<InputHandler>(m_window);
 
     m_depthBuffer = std::make_unique<Texture>(m_vkPhysicalDevice, m_vkDevice, WINDOW_WIDTH, WINDOW_HEIGHT, 
         VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -336,28 +345,29 @@ void Renderer::endFrame()
     m_bufferIdx = (m_bufferIdx + 1) % BUFFER_COUNT;
 }
 
+void Renderer::update()
+{
+    m_inputHandler->update();
+
+    m_scene->update(m_inputHandler.get(), m_bufferIdx);
+}
+
 void Renderer::render()
 {
-    auto keyCallback = [](GLFWwindow* window, int key, int scancode, int action, int mods)
+    beginFrame();
+    for (auto& pass : m_renderPasses)
     {
-        auto scene = (Scene*)glfwGetWindowUserPointer(window);
-        scene->keyPressed(window, key, scancode, action, mods);
-    };
-    glfwSetWindowUserPointer(m_window, m_scene.get());
-    glfwSetKeyCallback(m_window, keyCallback);
+        pass->render(m_scene.get(), m_frameBufferIdx, m_bufferIdx, m_dt);
+    }
+    endFrame();
+}
 
+void Renderer::loop()
+{
     while (!glfwWindowShouldClose(m_window))
     {
-        beginFrame();
-
-        for (auto& pass : m_renderPasses)
-        {
-            pass->render(m_scene.get(), m_frameBufferIdx, m_bufferIdx, m_dt);
-        }
-
-        endFrame();
-
-        glfwPollEvents();
+        update();
+        render();
     }
 
     vkDeviceWaitIdle(m_vkDevice);

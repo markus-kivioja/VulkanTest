@@ -3,7 +3,7 @@
 int main()
 {
     Renderer renderer;
-    renderer.render();
+    renderer.loop();
 
     return 0;
 }

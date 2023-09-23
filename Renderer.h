@@ -1,13 +1,7 @@
 #pragma once
 
-#include "Texture.h"
 #include "RenderThreadPool.h"
-
-#define VK_USE_PLATFORM_WIN32_KHR
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
+#include "Texture.h"
 
 #include <cstdint>
 #include <vector>
@@ -19,6 +13,7 @@ struct GLFWwindow;
 
 class Scene;
 class RenderPass;
+class InputHandler;
 
 class Renderer
 {
@@ -30,14 +25,18 @@ public:
 
 	Renderer();
 	~Renderer();
-	void render();
+
+	void loop();
 
 private:
 	void initVulkan();
 	void beginFrame();
 	void endFrame();
+	void update();
+	void render();
 
 	GLFWwindow* m_window;
+	std::unique_ptr<InputHandler> m_inputHandler;
 
 	VkInstance m_vkInstance{ VK_NULL_HANDLE };
 	VkPhysicalDevice m_vkPhysicalDevice{ VK_NULL_HANDLE };
@@ -65,7 +64,7 @@ private:
 		IMGUI,
 		COUNT
 	};
-	std::vector< std::unique_ptr<RenderPass>> m_renderPasses;
+	std::vector<std::unique_ptr<RenderPass>> m_renderPasses;
 
 	uint32_t m_bufferIdx{ 0 };
 	uint32_t m_frameBufferIdx{ 0 };
