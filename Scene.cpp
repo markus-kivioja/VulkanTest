@@ -116,6 +116,30 @@ void Scene::clean()
 
 void Scene::update(InputHandler* inputHandler, uint32_t bufferIdx)
 {
+    glm::vec3 camMoveDir{ 0 };
+    InputHandler::KeyState keyState = inputHandler->getKeyState();
+    if (keyState.forwardPressed)
+    {
+        camMoveDir += glm::vec3(0, 0, 1.0f);
+    }
+    if (keyState.backwardPressed)
+    {
+        camMoveDir += glm::vec3(0, 0, -1.0f);
+    }
+    if (keyState.leftPressed)
+    {
+        camMoveDir += glm::vec3(-1.0f, 0, 0);
+    }
+    if (keyState.rightPressed)
+    {
+        camMoveDir += glm::vec3(1.0f, 0, 0);
+    }
+    if (glm::length(camMoveDir))
+    {
+        camMoveDir = glm::normalize(camMoveDir);
+    }
+
+    m_cameras[Camera::Type::NORMAL]->move(camMoveDir, bufferIdx);
     m_cameras[Camera::Type::NORMAL]->turn(inputHandler->getDragVelocity(), bufferIdx);
 }
 

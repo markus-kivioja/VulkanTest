@@ -47,6 +47,11 @@ void InputHandler::update()
     m_prevMousePos = m_currentMousePos;
 }
 
+InputHandler::KeyState InputHandler::getKeyState()
+{
+    return m_keyState;
+}
+
 glm::vec2 InputHandler::getDragVelocity()
 {
     return m_dragVelocity;
@@ -54,25 +59,24 @@ glm::vec2 InputHandler::getDragVelocity()
 
 void InputHandler::keyPressed(int key, int action)
 {
-    if (action == GLFW_PRESS)
+    bool pressed = (action != GLFW_RELEASE);
+
+    switch (key)
     {
-        switch (key)
-        {
-        case GLFW_KEY_W:
-            std::cout << "Forward!" << std::endl;
-            break;
-        case GLFW_KEY_S:
-            std::cout << "Forward!" << std::endl;
-            break;
-        case GLFW_KEY_A:
-            std::cout << "Forward!" << std::endl;
-            break;
-        case GLFW_KEY_D:
-            std::cout << "Forward!" << std::endl;
-            break;
-        default:
-            break;
-        }
+    case GLFW_KEY_W:
+        m_keyState.forwardPressed = pressed;
+        break;
+    case GLFW_KEY_S:
+        m_keyState.backwardPressed = pressed;
+        break;
+    case GLFW_KEY_A:
+        m_keyState.leftPressed = pressed;
+        break;
+    case GLFW_KEY_D:
+        m_keyState.rightPressed = pressed;
+        break;
+    default:
+        break;
     }
 }
 
