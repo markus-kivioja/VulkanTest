@@ -141,11 +141,13 @@ void Scene::update(InputHandler* inputHandler, uint32_t bufferIdx)
 
     m_cameras[Camera::Type::NORMAL]->move(camMoveDir, bufferIdx);
     m_cameras[Camera::Type::NORMAL]->turn(inputHandler->getDragVelocity(), bufferIdx);
+
+    m_cameras[Camera::Type::NORMAL]->update(bufferIdx);
 }
 
 void Scene::render(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, Camera::Type cameraType, uint32_t bufferIdx, float dt)
 {
-    m_cameras[cameraType]->bind(commandBuffer, pipelineLayout, bufferIdx, dt);
+    m_cameras[cameraType]->bind(commandBuffer, pipelineLayout, bufferIdx);
 
     if (cameraType == Camera::Type::NORMAL)
     {

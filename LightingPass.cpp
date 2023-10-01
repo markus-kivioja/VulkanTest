@@ -390,7 +390,7 @@ void LightingPass::renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint3
 {
     begin(commandBuffer, m_frameBufferIdx);
 
-    scene->m_cameras[Camera::Type::LIGHT]->bind(commandBuffer, m_pipelineLayout, bufferIdx, dt);
+    scene->m_cameras[Camera::Type::LIGHT]->bind(commandBuffer, m_pipelineLayout, bufferIdx);
 
     LightingPass::Transforms transforms{};
     transforms.projInverse = glm::inverse(scene->m_cameras[Camera::Type::NORMAL]->m_projection);

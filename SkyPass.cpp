@@ -351,7 +351,7 @@ SkyPass::~SkyPass()
 void SkyPass::renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt)
 {
     begin(commandBuffer);
-    scene->m_cameras[Camera::Type::NORMAL]->bind(commandBuffer, m_pipelineLayout, bufferIdx, dt);
+    scene->m_cameras[Camera::Type::NORMAL]->bind(commandBuffer, m_pipelineLayout, bufferIdx);
     m_environmentCube->update(bufferIdx, dt);
 	m_environmentCube->render(commandBuffer, m_pipelineLayout, bufferIdx, dt);
     end(commandBuffer);

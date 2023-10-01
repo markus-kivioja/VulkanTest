@@ -19,7 +19,11 @@ layout(location = 0) out vec3 fragTexCoord;
 
 void main()
 {
-	mat4 mvp = cameraTransform.projection * cameraTransform.view * modelTransforms.model;
+	mat4 mv = cameraTransform.view * modelTransforms.model;
+	mv[3][0] = 0.0f;
+	mv[3][1] = 0.0f;
+	mv[3][2] = 0.0f;
+	mat4 mvp = cameraTransform.projection * mv;
     gl_Position = mvp * vec4(position, 1.0);
 	gl_Position.z = 1.0f;
 

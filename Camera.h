@@ -25,7 +25,8 @@ public:
 
 	Camera(Type type, VkPhysicalDevice physicalDevice, VkDevice device, VkDescriptorSetAllocateInfo descSetAllocInfo);
 
-	void bind(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t bufferIdx, float dt);
+	void update(uint32_t bufferIdx);
+	void bind(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t bufferIdx);
 
 	void move(glm::vec3 direction, uint32_t bufferIdx);
 	void turn(glm::vec2 direction, uint32_t bufferIdx);
