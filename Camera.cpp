@@ -80,11 +80,19 @@ void Camera::bind(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout
 
 void Camera::move(glm::vec3 direction, uint32_t bufferIdx)
 {
-    m_position += direction.z * m_direction * 0.02f;
+    static constexpr float SPEED = 0.02f;
+
+    m_position += direction.z * m_direction * SPEED;
+
+    auto rightDir = glm::vec3(-m_direction.z, 0, m_direction.x);
+    m_position += direction.x * rightDir * SPEED;
 }
 
 void Camera::turn(glm::vec2 direction, uint32_t bufferIdx)
 {
-    m_direction.x -= direction.x * 0.01f;
-    m_direction.y += direction.y * 0.01f;
+    static constexpr float SPEED = 0.002f;
+    auto rotMat = glm::rotate(glm::mat4(1.0f), direction.x * SPEED, glm::vec3(0, 1, 0));
+    auto rightDir = glm::vec3(-m_direction.z, 0, m_direction.x);
+    rotMat = glm::rotate(rotMat, direction.y * SPEED, rightDir);
+    m_direction = rotMat * glm::vec4(m_direction, 1.0f);
 }
