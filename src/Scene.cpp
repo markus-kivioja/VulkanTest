@@ -20,7 +20,7 @@ Scene::Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice d
 
     VkDescriptorPoolSize uniformBufferPoolSize{};
     uniformBufferPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uniformBufferPoolSize.descriptorCount = OBJECT_COUNT * 2 * static_cast<uint32_t>(Renderer::BUFFER_COUNT);
+    uniformBufferPoolSize.descriptorCount = (OBJECT_COUNT + 2) * static_cast<uint32_t>(Renderer::BUFFER_COUNT);
     VkDescriptorPoolSize texturePoolSize{};
     texturePoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     texturePoolSize.descriptorCount = OBJECT_COUNT * static_cast<uint32_t>(Renderer::BUFFER_COUNT);
@@ -30,7 +30,7 @@ Scene::Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice d
     std::array<VkDescriptorPoolSize, 2> poolSizes{ uniformBufferPoolSize, texturePoolSize };
     descriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     descriptorPoolCreateInfo.pPoolSizes = poolSizes.data();
-    descriptorPoolCreateInfo.maxSets = OBJECT_COUNT * 2 * static_cast<uint32_t>(Renderer::BUFFER_COUNT);
+    descriptorPoolCreateInfo.maxSets = (OBJECT_COUNT + 2) * static_cast<uint32_t>(Renderer::BUFFER_COUNT);
 
     VkResult result = vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &m_descriptorPool);
     if (result != VK_SUCCESS)

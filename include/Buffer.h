@@ -13,7 +13,7 @@ public:
 	Buffer(VkPhysicalDevice physicalDevice, VkDevice device, VkBufferUsageFlags usage, VkDeviceSize size);
 	~Buffer();
 
-	void update(void* data, size_t size);
+	void update(void* data, size_t offset, size_t size);
 private:
 	friend SceneObject;
 	friend Camera;
@@ -27,5 +27,5 @@ private:
 	VkBuffer m_vkBuffer{ VK_NULL_HANDLE };
 	VkDeviceMemory m_deviceMemory{ VK_NULL_HANDLE };
 
-	void* m_hostData{ nullptr };
+	uint8_t* m_hostData{ nullptr };
 };
