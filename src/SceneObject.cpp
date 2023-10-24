@@ -13,7 +13,6 @@ SceneObject::SceneObject(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice 
     m_physicalDevice(physicalDevice)
     , m_device(device)
     , m_copyCommandBuffer(copyCommandBuffer)
-    , m_descSetAllocInfo(descSetAllocInfo)
     , m_id(id)
 {
 }
@@ -25,47 +24,6 @@ void SceneObject::init()
 
     m_indexBuffer = std::make_unique<Buffer>(m_physicalDevice, m_device, m_copyCommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         sizeof(uint16_t) * m_indices.size(), m_indices.data());
-
-    m_descriptorSets.resize(Renderer::BUFFER_COUNT);
-    VkResult result = vkAllocateDescriptorSets(m_device, &m_descSetAllocInfo, m_descriptorSets.data());
-    if (result != VK_SUCCESS) {
-        std::cout << "Failed to allocate descriptor sets" << std::endl;
-        std::terminate();
-    }
-    for (uint32_t i = 0; i < Renderer::BUFFER_COUNT; ++i)
-    {
-        m_uniformBuffers.emplace_back(std::make_unique<Buffer>(m_physicalDevice, m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(GBufferPass::ModelTransforms)));
-        VkDescriptorBufferInfo uniformBufferInfo{};
-        uniformBufferInfo.buffer = m_uniformBuffers[i]->m_vkBuffer;
-        uniformBufferInfo.offset = 0;
-        uniformBufferInfo.range = sizeof(GBufferPass::ModelTransforms);
-
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = m_albedoMap->m_imageView;
-        imageInfo.sampler = m_albedoMap->m_sampler;
-
-        VkWriteDescriptorSet uniformBufferDescriptorWrite{};
-        uniformBufferDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        uniformBufferDescriptorWrite.dstSet = m_descriptorSets[i];
-        uniformBufferDescriptorWrite.dstBinding = 0;
-        uniformBufferDescriptorWrite.dstArrayElement = 0;
-        uniformBufferDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uniformBufferDescriptorWrite.descriptorCount = 1;
-        uniformBufferDescriptorWrite.pBufferInfo = &uniformBufferInfo;
-
-        VkWriteDescriptorSet textureDescriptorWrite{};
-        textureDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        textureDescriptorWrite.dstSet = m_descriptorSets[i];
-        textureDescriptorWrite.dstBinding = 1;
-        textureDescriptorWrite.dstArrayElement = 0;
-        textureDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        textureDescriptorWrite.descriptorCount = 1;
-        textureDescriptorWrite.pImageInfo = &imageInfo;
-
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites{ uniformBufferDescriptorWrite, textureDescriptorWrite };
-        vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-    }
 }
 
 SceneObject::~SceneObject()
@@ -238,12 +196,10 @@ void SceneObject::loadIndexedMesh(std::string const& filename)
 
 void SceneObject::render(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t bufferIdx, float dt)
 {
-
     VkBuffer vertexBuffers[] = { m_vertexBuffer->m_vkBuffer };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer->m_vkBuffer, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &m_descriptorSets[bufferIdx], 0, nullptr);
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
 }

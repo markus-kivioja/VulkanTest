@@ -142,11 +142,11 @@ Buffer::~Buffer()
 	vkFreeMemory(m_device, m_deviceMemory, nullptr);
 }
 
-void Buffer::update(void* data, size_t size)
+void Buffer::update(void* data, size_t offset, size_t size)
 {
 	if (m_hostData)
 	{
-		memcpy(m_hostData, data, size);
+		memcpy(m_hostData + offset, data, size);
 	}
 	else
 	{

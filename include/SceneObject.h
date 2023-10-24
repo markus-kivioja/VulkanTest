@@ -2,7 +2,9 @@
 
 #include "GBufferPass.h"
 #include "Buffer.h"
-#include "Texture.h"
+#include "Material.h"
+#include "Mesh.h"
+#include "Tranforms.h"
 
 #include <vulkan/vulkan.h>
 
@@ -25,28 +27,15 @@ public:
 protected:
 	uint16_t addVertex(uint32_t hash, GBufferPass::Vertex* pVertex);
 	void loadIndexedMesh(std::string const& filename);
-	struct VertexCacheEntry
-	{
-		uint32_t index;
-		VertexCacheEntry* pNext;
-	};
+
 	VkPhysicalDevice m_physicalDevice;
 	VkDevice m_device;
 	VkCommandBuffer m_copyCommandBuffer;
-	VkDescriptorSetAllocateInfo m_descSetAllocInfo;
 
-	std::vector<VertexCacheEntry*> m_vertexCache;
-
-	std::vector<VkDescriptorSet> m_descriptorSets;
-
-	std::unique_ptr<Buffer> m_vertexBuffer;
-	std::unique_ptr<Buffer> m_indexBuffer;
-	std::vector<std::unique_ptr<Buffer>> m_uniformBuffers;
-
-	std::unique_ptr<Texture> m_albedoMap;
-	std::unique_ptr<Texture> m_normalMap;
-	std::unique_ptr<Texture> m_displacementMap;
-	std::unique_ptr<Texture> m_specularMap;
+	Transforms* m_transforms{ nullptr };
+	
+	std::unique_ptr<Mesh> m_mesh{ nullptr };
+	std::unique_ptr<Material> m_material{ nullptr };
 
 	std::vector<GBufferPass::Vertex> m_vertices;
 	std::vector<uint16_t> m_indices;
