@@ -2,7 +2,8 @@
 
 #include <vulkan/vulkan.h>
 
-class SceneObject;
+class Mesh;
+class Transforms;
 class Camera;
 class LightingPass;
 
@@ -15,7 +16,8 @@ public:
 
 	void update(void* data, size_t offset, size_t size);
 private:
-	friend SceneObject;
+	friend Mesh;
+	friend Transforms;
 	friend Camera;
 	friend LightingPass;
 

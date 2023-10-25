@@ -10,7 +10,7 @@ class GBufferPass;
 class ShadowPass;
 class LightingPass;
 class ImguiPass;
-class SceneObject;
+class Material;
 class Renderer;
 
 class Texture
@@ -27,7 +27,7 @@ private:
 	friend ShadowPass;
 	friend LightingPass;
 	friend ImguiPass;
-	friend SceneObject;
+	friend Material;
 	friend Renderer;
 
 	static constexpr uint32_t CUBE_LAYER_COUNT = 6;

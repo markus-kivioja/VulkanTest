@@ -33,7 +33,6 @@ private:
 	friend SkyPass;
 	friend LightingPass;
 
-	VkDescriptorPool m_descriptorPool{ VK_NULL_HANDLE };
 	VkDevice m_vkDevice{ VK_NULL_HANDLE };
 
 	std::vector<std::unique_ptr<Camera>> m_cameras;

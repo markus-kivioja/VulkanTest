@@ -4,12 +4,9 @@
 class Mickey : public SceneObject
 {
 public:
-	Mickey(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer,
-		VkDescriptorSetAllocateInfo descSetAllocInfo);
+	Mickey(uint32_t id, Transforms* transforms, Mesh* mesh, Material* material);
 
-	virtual void update(uint32_t bufferIdx, float dt) override;
+	virtual void update(float dt, uint32_t bufferIdx) override;
 private:
-	inline static const std::string MESH_FILENAME = "assets/mickey.obj";
-	inline static const std::string ALBEDO_FILENAME = "assets/mickey.png";
 };
 

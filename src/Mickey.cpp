@@ -5,16 +5,15 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-Mickey::Mickey(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer,
-	VkDescriptorSetAllocateInfo descSetAllocInfo) :
-	SceneObject::SceneObject(id, physicalDevice, device, copyCommandBuffer, descSetAllocInfo)
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+Mickey::Mickey(uint32_t id, Transforms* transforms, Mesh* mesh, Material* material) :
+	SceneObject::SceneObject(id, transforms, mesh, material)
 {
-	loadIndexedMesh(MESH_FILENAME);
-    m_albedoMap = std::make_unique<Texture>(physicalDevice, device, copyCommandBuffer, std::vector{ ALBEDO_FILENAME });
-    SceneObject::SceneObject::init();
 }
 
-void Mickey::update(uint32_t bufferIdx, float dt)
+void Mickey::update(float dt, uint32_t bufferIdx)
 {
     m_orientation += dt * m_rotationSpeed;
     constexpr float scale = 0.1f;
