@@ -14,12 +14,17 @@
 class Transforms
 {
 public:
-	Transforms(uint32_t count);
+	Transforms(VkPhysicalDevice physicalDevice, VkDevice device, uint32_t count);
+
+	VkDescriptorSetLayout getDescLayout() const { return m_descSetLayout; };
 
 	void update(uint32_t index, glm::mat4 transform, uint32_t bufferIdx);
-	void bind(VkCommandBuffer commandBuffer, uint32_t index, uint32_t bufferIdx);
+	void bind(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t bufferIdx, uint32_t index);
 private:
+	VkDescriptorPool m_descriptorPool{ VK_NULL_HANDLE };
+	VkDescriptorSetLayout m_descSetLayout{ VK_NULL_HANDLE };
 	VkDescriptorSet m_descriptorSet{ VK_NULL_HANDLE };
+
 	std::unique_ptr<Buffer> m_uniformBuffer{ nullptr };
 
 	uint32_t m_size{ 0 };

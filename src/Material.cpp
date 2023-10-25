@@ -1,7 +1,12 @@
-#include "Mesh.h"
+#include "Material.h"
 
-Material::Material()
+#include <memory>
+#include <vector>
+
+Material::Material(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, const std::string& filename)
 {
+    m_albedoMap = std::make_unique<Texture>(physicalDevice, device, copyCommandBuffer, std::vector{ filename });
+
     VkDescriptorImageInfo imageInfo{};
     imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     imageInfo.imageView = m_albedoMap->m_imageView;
@@ -9,7 +14,7 @@ Material::Material()
 
     VkWriteDescriptorSet textureDescriptorWrite{};
     textureDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    textureDescriptorWrite.dstSet = m_descriptorSets[i];
+    textureDescriptorWrite.dstSet = m_descriptorSet;
     textureDescriptorWrite.dstBinding = 1;
     textureDescriptorWrite.dstArrayElement = 0;
     textureDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -17,5 +22,10 @@ Material::Material()
     textureDescriptorWrite.pImageInfo = &imageInfo;
 
     std::array<VkWriteDescriptorSet, 1> descriptorWrites{ textureDescriptorWrite };
-    vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+}
+
+void Material::bind(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayuout)
+{
+
 }

@@ -19,7 +19,8 @@ public:
 		glm::mat4 projection;
 	};
 
-	GBufferPass(VkDevice device, RenderThreadPool* threadPool, std::vector<Texture*>& colorTargets, Texture* depthTarget);
+	GBufferPass(VkDevice device, RenderThreadPool* threadPool, std::vector<Texture*>& colorTargets, Texture* depthTarget,
+		VkDescriptorSetLayout transformDescSetLayout, VkDescriptorSetLayout materialDescSetLayout);
 	virtual ~GBufferPass();
 
 	virtual void renderImpl(Scene* scene, VkCommandBuffer commandBuffer, uint32_t bufferIdx, float dt) override;
