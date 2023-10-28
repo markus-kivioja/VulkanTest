@@ -26,6 +26,10 @@ Renderer::Renderer()
 {
     initVulkan();
 
+    m_resourceManager = std::make_unique<ResourceManager>(m_vkPhysicalDevice, m_vkDevice, "assets/");
+
+    m_transforms = std::make_unique<Transforms>(m_vkPhysicalDevice, m_vkDevice, 10);
+
     m_inputHandler = std::make_unique<InputHandler>(m_window);
 
     m_depthBuffer = std::make_unique<Texture>(m_vkPhysicalDevice, m_vkDevice, WINDOW_WIDTH, WINDOW_HEIGHT, 

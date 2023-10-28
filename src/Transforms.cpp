@@ -1,4 +1,4 @@
-#include "Tranforms.h"
+#include "Transforms.h"
 
 #include <iostream>
 
@@ -42,12 +42,11 @@ Transforms::Transforms(VkPhysicalDevice physicalDevice, VkDevice device, uint32_
         std::terminate();
     }
 
-    std::vector<VkDescriptorSetLayout> modelLayouts(Renderer::BUFFER_COUNT, m_descSetLayout);
     VkDescriptorSetAllocateInfo descSetAllocInfo{};
     descSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descSetAllocInfo.descriptorPool = m_descriptorPool;
-    descSetAllocInfo.descriptorSetCount = static_cast<uint32_t>(Renderer::BUFFER_COUNT);
-    descSetAllocInfo.pSetLayouts = modelLayouts.data();
+    descSetAllocInfo.descriptorSetCount = 1;
+    descSetAllocInfo.pSetLayouts = &m_descSetLayout;
 
     VkResult result = vkAllocateDescriptorSets(device, &descSetAllocInfo, &m_descriptorSet);
     if (result != VK_SUCCESS) {

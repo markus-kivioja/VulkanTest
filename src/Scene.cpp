@@ -12,18 +12,11 @@
 #include <iostream>
 #include <array>
 
-Scene::Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice device, VkQueue queue, uint32_t queueFamilyIdx) :
+Scene::Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice device, ResourceManager* resourceManager) :
     m_vkDevice(device)
 {
     static constexpr uint32_t MICKEY_COUNT = 4;
     static constexpr uint32_t OBJECT_COUNT = MICKEY_COUNT + 1;
-
-    std::vector<VkDescriptorSetLayout> modelLayouts(Renderer::BUFFER_COUNT, renderPass->m_modelSetLayout);
-    VkDescriptorSetAllocateInfo modelDescSetAllocInfo{};
-    modelDescSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    modelDescSetAllocInfo.descriptorPool = m_descriptorPool;
-    modelDescSetAllocInfo.descriptorSetCount = static_cast<uint32_t>(Renderer::BUFFER_COUNT);
-    modelDescSetAllocInfo.pSetLayouts = modelLayouts.data();
 
     std::vector<VkDescriptorSetLayout> cameraLayouts(Renderer::BUFFER_COUNT, renderPass->m_cameraSetLayout);
     VkDescriptorSetAllocateInfo cameraDescSetAllocInfo{};
@@ -32,58 +25,20 @@ Scene::Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice d
     cameraDescSetAllocInfo.descriptorSetCount = static_cast<uint32_t>(Renderer::BUFFER_COUNT);
     cameraDescSetAllocInfo.pSetLayouts = cameraLayouts.data();
 
-    VkCommandPoolCreateInfo commanPoolCreateInfo{};
-    commanPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    commanPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    commanPoolCreateInfo.queueFamilyIndex = queueFamilyIdx;
-    VkCommandPool copyCommandPool{ VK_NULL_HANDLE };
-    result = vkCreateCommandPool(device, &commanPoolCreateInfo, nullptr, &copyCommandPool);
-    if (result != VK_SUCCESS)
-    {
-        std::cout << "Failed to create copy command pool" << std::endl;
-        std::terminate();
-    }
-
-    VkCommandBufferAllocateInfo commandBufferAllocInfo{};
-    commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferAllocInfo.commandPool = copyCommandPool;
-    commandBufferAllocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer copyCommandBuffer;
-    vkAllocateCommandBuffers(device, &commandBufferAllocInfo, &copyCommandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
-
     m_cameras.resize(Camera::Type::COUNT);
     m_cameras[Camera::Type::NORMAL] = std::make_unique<Camera>(Camera::Type::NORMAL, physicalDevice, device, cameraDescSetAllocInfo);
     m_cameras[Camera::Type::LIGHT] = std::make_unique<Camera>(Camera::Type::LIGHT, physicalDevice, device, cameraDescSetAllocInfo);
     
+    Material* mickeyMaterial = resourceManager->getMaterial("mickey");
+    Material* crateMaterial = resourceManager->getMaterial("crate");
+    Mesh* mickeyMesh = resourceManager->getMesh("mickey");
+    Mesh* floorMesh = resourceManager->getMesh("floor");
+
     for (int i = 0; i < MICKEY_COUNT; ++i)
     {
-        m_objects.emplace_back(std::make_unique<Mickey>(i, physicalDevice, device, copyCommandBuffer, modelDescSetAllocInfo));
+        m_objects.emplace_back(std::make_unique<Mickey>(i, physicalDevice, device, mickeyMesh, mickeyMaterial));
     }
-    m_objects.emplace_back(std::make_unique<Floor>(OBJECT_COUNT, physicalDevice, device, copyCommandBuffer, modelDescSetAllocInfo));
-
-    ImGui_ImplVulkan_CreateFontsTexture(copyCommandBuffer);
-
-    vkEndCommandBuffer(copyCommandBuffer);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &copyCommandBuffer;
-
-    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(queue);
-
-    ImGui_ImplVulkan_DestroyFontUploadObjects();
-
-    vkFreeCommandBuffers(device, copyCommandPool, 1, &copyCommandBuffer);
-    vkDestroyCommandPool(device, copyCommandPool, nullptr);
+    m_objects.emplace_back(std::make_unique<Floor>(OBJECT_COUNT, physicalDevice, device, floorMesh, crateMaterial));
 }
 
 void Scene::clean()
