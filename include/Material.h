@@ -9,7 +9,7 @@
 class Material
 {
 public:
-	Material(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, const std::string& filename);
+	Material(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, VkDescriptorSetLayout descSetLayout, const std::string& filename);
 
 	void bind(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayuout);
 private:

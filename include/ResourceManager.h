@@ -12,11 +12,19 @@
 class ResourceManager
 {
 public:
-	ResourceManager(VkPhysicalDevice physicalDevice, VkDevice device, const std::string& assetPath);
+	ResourceManager(VkPhysicalDevice physicalDevice, VkDevice device, VkQueue queue, uint32_t queueFamilyIdx, const std::string& assetPath);
 
 	VkDescriptorSetLayout getMaterialDescSetLayout() const { return m_materialDescSetLayout; };
 
 private:
+	inline static const std::vector<std::string> MATERIAL_FILES = {
+		"crate.jpg",
+		"mickey.png"
+	};
+	inline static const std::string MESH_FILES = {
+		"mickey.obj"
+	};
+
 	VkDescriptorPool m_descriptorPool{ VK_NULL_HANDLE };
 	VkDescriptorSetLayout m_materialDescSetLayout{ VK_NULL_HANDLE };
 

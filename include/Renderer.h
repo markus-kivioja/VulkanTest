@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ResourceManager.h"
+#include "Transforms.h"
 #include "RenderThreadPool.h"
 #include "Texture.h"
 
@@ -30,6 +31,16 @@ public:
 	void loop();
 
 private:
+	enum RenderPassId
+	{
+		SKY = 0,
+		GBUFFER,
+		SHADOW,
+		LIGHTING,
+		IMGUI,
+		COUNT
+	};
+
 	void initVulkan();
 	void beginFrame();
 	void endFrame();
@@ -54,28 +65,18 @@ private:
 	std::unique_ptr<Texture> m_depthBuffer;
 	std::unique_ptr<Texture> m_shadowMap;
 
-	std::vector<std::unique_ptr<Texture>> m_frameBuffers;
-
-	enum RenderPassId
-	{
-		SKY = 0,
-		GBUFFER,
-		SHADOW,
-		LIGHTING,
-		IMGUI,
-		COUNT
-	};
+	std::unique_ptr<ResourceManager> m_resourceManager;
+	std::unique_ptr<Transforms> m_transforms;
 	std::vector<std::unique_ptr<RenderPass>> m_renderPasses;
+	std::vector<std::unique_ptr<Texture>> m_frameBuffers;
+	std::unique_ptr<Scene> m_scene;
+	std::unique_ptr<RenderThreadPool> m_renderThreadPool;
 
 	uint32_t m_bufferIdx{ 0 };
 	uint32_t m_frameBufferIdx{ 0 };
 	uint32_t m_queueFamilyIdx{ 0 };
 	uint32_t m_minImageCount{ 0 };
-
-	std::unique_ptr<Scene> m_scene;
-
 	uint32_t m_threadCount{ 0 };
-	std::unique_ptr<RenderThreadPool> m_renderThreadPool;
 
 	float m_dt{ 0 };
 };

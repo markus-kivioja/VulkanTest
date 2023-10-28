@@ -43,11 +43,6 @@ RenderPass::RenderPass(VkDevice device, RenderThreadPool* threadPool, uint32_t c
 
 RenderPass::~RenderPass()
 {
-    if (m_modelSetLayout != VK_NULL_HANDLE)
-    {
-        vkDestroyDescriptorSetLayout(m_vkDevice, m_modelSetLayout, nullptr);
-        m_modelSetLayout = VK_NULL_HANDLE;
-    }
     if (m_cameraSetLayout != VK_NULL_HANDLE)
     {
         vkDestroyDescriptorSetLayout(m_vkDevice, m_cameraSetLayout, nullptr);

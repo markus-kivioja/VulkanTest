@@ -11,7 +11,7 @@
 
 #include "SceneObject.h"
 #include "Camera.h"
-#include "Tranforms.h"
+#include "Transforms.h"
 
 struct GLFWwindow;
 
@@ -22,7 +22,7 @@ class InputHandler;
 class Scene
 {
 public:
-	Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice device, VkQueue queue, uint32_t queueFamilyIdx);
+	Scene(RenderPass* renderPass, VkPhysicalDevice physicalDevice, VkDevice device, ResourceManager* resourceManager);
 
 	void clean();
 

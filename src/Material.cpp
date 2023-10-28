@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-Material::Material(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, const std::string& filename)
+Material::Material(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, VkDescriptorSetLayout descSetLayout, const std::string& filename)
 {
     m_albedoMap = std::make_unique<Texture>(physicalDevice, device, copyCommandBuffer, std::vector{ filename });
 
