@@ -60,7 +60,7 @@ Camera::Camera(Type type, VkPhysicalDevice physicalDevice, VkDevice device, VkDe
         std::array<VkWriteDescriptorSet, 1> descriptorWrites{ uniformBufferDescriptorWrite };
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
-        m_uniformBuffers[i]->update(&cameraTransforms, sizeof(GBufferPass::CameraTransforms));
+        m_uniformBuffers[i]->update(&cameraTransforms, 0, sizeof(GBufferPass::CameraTransforms));
     }
 }
 
@@ -70,7 +70,7 @@ void Camera::update(uint32_t bufferIdx)
     m_view = glm::lookAt(m_position, m_position + m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
     cameraTransforms.view = m_view;
     cameraTransforms.projection = m_projection;
-    m_uniformBuffers[bufferIdx]->update(&cameraTransforms, sizeof(GBufferPass::CameraTransforms));
+    m_uniformBuffers[bufferIdx]->update(&cameraTransforms, 0, sizeof(GBufferPass::CameraTransforms));
 }
 
 void Camera::bind(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t bufferIdx)

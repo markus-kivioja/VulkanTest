@@ -11,7 +11,6 @@
 
 class Texture;
 class Scene;
-class Renderer;
 
 class RenderPass
 {

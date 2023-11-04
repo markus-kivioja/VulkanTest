@@ -4,10 +4,9 @@
 class EnvironmentCube : public SceneObject
 {
 public:
-	EnvironmentCube(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer,
-		VkDescriptorSetAllocateInfo descSetAllocInfo);
+	EnvironmentCube(uint32_t id, Transforms* transforms, Mesh* mesh, Material* material);
 
-	virtual void update(uint32_t bufferIdx, float dt) override;
+	virtual void update(float dt, uint32_t bufferIdx) override;
 private:
 	inline static const std::vector<std::string> ALBEDO_FILENAMES =
 	{

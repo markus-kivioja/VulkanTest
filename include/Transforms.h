@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Buffer.h"
-#include "Renderer.h"
 
 #include <vulkan/vulkan.h>
 #define GLM_FORCE_RADIANS
