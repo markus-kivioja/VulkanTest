@@ -146,7 +146,7 @@ void Buffer::update(void* data, size_t offset, size_t size)
 {
 	if (m_hostData)
 	{
-		memcpy(m_hostData + offset, data, size);
+		memcpy(static_cast<uint8_t*>(m_hostData) + offset, data, size);
 	}
 	else
 	{

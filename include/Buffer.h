@@ -29,5 +29,5 @@ private:
 	VkBuffer m_vkBuffer{ VK_NULL_HANDLE };
 	VkDeviceMemory m_deviceMemory{ VK_NULL_HANDLE };
 
-	uint8_t* m_hostData{ nullptr };
+	void* m_hostData{ nullptr };
 };

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ResourceManager.h"
+//#include "ResourceManager.h"
 #include "Transforms.h"
 #include "RenderThreadPool.h"
 #include "Texture.h"
@@ -65,7 +65,7 @@ private:
 	std::unique_ptr<Texture> m_depthBuffer;
 	std::unique_ptr<Texture> m_shadowMap;
 
-	std::unique_ptr<ResourceManager> m_resourceManager;
+	//std::unique_ptr<ResourceManager> m_resourceManager;
 	std::unique_ptr<Transforms> m_transforms;
 	std::vector<std::unique_ptr<RenderPass>> m_renderPasses;
 	std::vector<std::unique_ptr<Texture>> m_frameBuffers;

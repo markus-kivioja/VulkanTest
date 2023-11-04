@@ -7,9 +7,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-EnvironmentCube::EnvironmentCube(uint32_t id, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer,
-    VkDescriptorSetAllocateInfo descSetAllocInfo) :
-    SceneObject::SceneObject(id, physicalDevice, device, copyCommandBuffer, descSetAllocInfo)
+EnvironmentCube::EnvironmentCube(uint32_t id, Transforms* transforms, Mesh* mesh, Material* material) :
+    SceneObject::SceneObject(id, transforms, mesh, material)
 {
     m_vertices = {
         {{-0.5f, -0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
@@ -56,7 +55,7 @@ EnvironmentCube::EnvironmentCube(uint32_t id, VkPhysicalDevice physicalDevice, V
     SceneObject::SceneObject::init();
 }
 
-void EnvironmentCube::update(uint32_t bufferIdx, float dt)
+void EnvironmentCube::update(float dt, uint32_t bufferIdx)
 {
     GBufferPass::ModelTransforms modelTransforms{};
     constexpr float scale = 50.0f;
