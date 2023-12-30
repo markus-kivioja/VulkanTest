@@ -29,6 +29,6 @@ protected:
 	Material* m_material{ nullptr };
 
 	float m_rotationSpeed{ 1.0f };
-	float m_orientation = 0;
+	float m_orientation{ 0.0f };
 };
 

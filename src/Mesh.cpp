@@ -13,6 +13,18 @@ Mesh::Mesh(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer cop
 	loadIndexedMesh(filename);
 }
 
+Mesh::Mesh(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, const std::vector<GBufferPass::Vertex>& vertices, const std::vector<uint16_t>& indices)
+{
+	m_vertices = vertices;
+	m_indices = indices;
+
+	m_vertexBuffer = std::make_unique<Buffer>(physicalDevice, device, copyCommandBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		sizeof(GBufferPass::Vertex) * m_vertices.size(), m_vertices.data());
+
+	m_indexBuffer = std::make_unique<Buffer>(physicalDevice, device, copyCommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		sizeof(uint16_t) * m_indices.size(), m_indices.data());
+}
+
 Mesh::~Mesh()
 {
 	for (auto cacheEntry : m_vertexCache)
@@ -29,7 +41,7 @@ uint16_t Mesh::addVertex(uint32_t hash, GBufferPass::Vertex* pVertex)
 	if ((uint32_t)m_vertexCache.size() > hash)
 	{
 		VertexCacheEntry* pEntry = m_vertexCache[hash];
-		while (pEntry != NULL)
+		while (pEntry != nullptr)
 		{
 			GBufferPass::Vertex* pCacheVertex = &(m_vertices[pEntry->index]);
 
@@ -51,11 +63,11 @@ uint16_t Mesh::addVertex(uint32_t hash, GBufferPass::Vertex* pVertex)
 		m_vertices.emplace_back(*pVertex);
 
 		VertexCacheEntry* pNewEntry = new VertexCacheEntry;
-		if (pNewEntry == NULL)
+		if (pNewEntry == nullptr)
 			return (uint16_t)-1;
 
 		pNewEntry->index = index;
-		pNewEntry->pNext = NULL;
+		pNewEntry->pNext = nullptr;
 
 		while ((uint32_t)m_vertexCache.size() <= hash)
 		{
@@ -63,13 +75,13 @@ uint16_t Mesh::addVertex(uint32_t hash, GBufferPass::Vertex* pVertex)
 		}
 
 		VertexCacheEntry* pCurEntry = m_vertexCache[hash];
-		if (pCurEntry == NULL)
+		if (pCurEntry == nullptr)
 		{
 			m_vertexCache[hash] = pNewEntry;
 		}
 		else
 		{
-			while (pCurEntry->pNext != NULL)
+			while (pCurEntry->pNext != nullptr)
 			{
 				pCurEntry = pCurEntry->pNext;
 			}

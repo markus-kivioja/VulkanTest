@@ -1,5 +1,12 @@
 #include "ResourceManager.h"
 
+#include "Mesh.h"
+#include "Material.h"
+
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_vulkan.h"
+
 #include <filesystem>
 
 ResourceManager::ResourceManager(VkPhysicalDevice physicalDevice, VkDevice device, VkQueue queue, uint32_t queueFamilyIdx, const std::string& assetPath)
@@ -91,6 +98,4 @@ ResourceManager::ResourceManager(VkPhysicalDevice physicalDevice, VkDevice devic
 
     vkFreeCommandBuffers(device, copyCommandPool, 1, &copyCommandBuffer);
     vkDestroyCommandPool(device, copyCommandPool, nullptr);
-
-
 }

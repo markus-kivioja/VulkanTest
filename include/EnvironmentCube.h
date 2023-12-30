@@ -1,6 +1,8 @@
 #pragma once
 #include "SceneObject.h"
 
+#include "Mesh.h"
+
 class EnvironmentCube : public SceneObject
 {
 public:
@@ -17,5 +19,7 @@ private:
 		"assets/posz.jpg",
 		"assets/negz.jpg",
 	};
+
+	
 };
 
