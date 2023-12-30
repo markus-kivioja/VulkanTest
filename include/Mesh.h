@@ -13,6 +13,8 @@ class Mesh
 {
 public:
 	Mesh(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, const std::string& filename);
+	Mesh(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer copyCommandBuffer, const std::vector<GBufferPass::Vertex>& vertices, const std::vector<uint16_t>& indices);
+
 	~Mesh();
 
 	void bind(VkCommandBuffer commandBuffer);

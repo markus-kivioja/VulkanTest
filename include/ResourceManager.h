@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Mesh.h"
-#include "Material.h"
-
 #include <vulkan/vulkan.h>
 
 #include <memory>
 #include <vector>
 #include <string>
+
+class Mesh;
+class Material;
 
 class ResourceManager
 {
