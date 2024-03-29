@@ -83,11 +83,15 @@ Renderer::Renderer()
     m_scene = std::make_unique<Scene>(m_renderPasses[RenderPassId::GBUFFER].get(), m_vkPhysicalDevice, m_vkDevice, m_presentQueue, m_queueFamilyIdx);
 
     // Set the render job dependencies
+
+    // Need to wait because G-buffer is not double buffered so it might still be in use by the previus thread.
+    // Otherwise only lighting pass would depend on the framebuffer availability.
+    m_renderPasses[SKY]->dependsOn(m_frameBufferAvailable);
+
     m_renderPasses[GBUFFER]->dependsOn(m_renderPasses[SKY].get());
     
     m_renderPasses[LIGHTING]->dependsOn(m_renderPasses[GBUFFER].get());
     m_renderPasses[LIGHTING]->dependsOn(m_renderPasses[SHADOW].get());
-    m_renderPasses[LIGHTING]->dependsOn(m_frameBufferAvailable);
 
     m_renderPasses[IMGUI]->dependsOn(m_renderPasses[LIGHTING].get());
     m_renderPasses[IMGUI]->signalCPU(m_vkFences);
