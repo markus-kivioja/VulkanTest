@@ -354,20 +354,22 @@ void Renderer::update()
 
 void Renderer::render()
 {
-    beginFrame();
     for (auto& pass : m_renderPasses)
     {
         pass->render(m_scene.get(), m_frameBufferIdx, m_bufferIdx, m_dt);
     }
-    endFrame();
 }
 
 void Renderer::loop()
 {
     while (!glfwWindowShouldClose(m_window))
     {
+        beginFrame();
+
         update();
         render();
+
+        endFrame();
     }
 
     vkDeviceWaitIdle(m_vkDevice);
