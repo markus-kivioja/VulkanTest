@@ -51,7 +51,7 @@ void main()
 	vec4 lightNDC = lightTransform.projection * lightTransform.view * worldSpacePos;
 	lightNDC /= lightNDC.w;
 	vec2 shadowMapUV = lightNDC.xy * 0.5 + 0.5;
-	const float SHADOW_BIAS = 0.001f;
+	const float SHADOW_BIAS = 0.005f;
 	if (lightNDC.z > texture(shadowSampler, shadowMapUV).r + SHADOW_BIAS)
 	{
 		shadow = 0.0f;
